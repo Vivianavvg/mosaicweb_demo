@@ -12,7 +12,35 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. REPORT SNAPSHOTS
+-- 1b. API SOURCE-OF-TRUTH WORKSPACE STATE
+-- Structured workflow state only; original PDFs remain in the iOS encrypted store.
+CREATE TABLE IF NOT EXISTS workspace_states (
+    auth0_subject VARCHAR(255) PRIMARY KEY REFERENCES users(auth0_subject) ON DELETE CASCADE,
+    state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. VERIFIED PUBLIC RECIPIENT DIRECTORY
+-- This stores official business contact routes only, never report contents.
+CREATE TABLE IF NOT EXISTS recipient_contacts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    issuer_name VARCHAR(255) NOT NULL,
+    normalized_issuer_name VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(320) NOT NULL,
+    source_url TEXT NOT NULL,
+    source_label VARCHAR(255) NOT NULL,
+    verification_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    verified_at TIMESTAMPTZ,
+    last_checked_at TIMESTAMPTZ,
+    metadata_json JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS recipient_contacts_issuer_lookup
+    ON recipient_contacts (normalized_issuer_name);
+
+-- 3. REPORT SNAPSHOTS
 CREATE TABLE IF NOT EXISTS report_snapshots (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -24,7 +52,7 @@ CREATE TABLE IF NOT EXISTS report_snapshots (
     is_synthetic BOOLEAN DEFAULT FALSE
 );
 
--- 3. REPORT ACCOUNTS
+-- 4. REPORT ACCOUNTS
 CREATE TABLE IF NOT EXISTS report_accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     snapshot_id UUID REFERENCES report_snapshots(id) ON DELETE CASCADE,
@@ -41,7 +69,7 @@ CREATE TABLE IF NOT EXISTS report_accounts (
     local_fingerprint VARCHAR(255)
 );
 
--- 4. REPORT INQUIRIES
+-- 5. REPORT INQUIRIES
 CREATE TABLE IF NOT EXISTS report_inquiries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     snapshot_id UUID REFERENCES report_snapshots(id) ON DELETE CASCADE,
@@ -51,7 +79,7 @@ CREATE TABLE IF NOT EXISTS report_inquiries (
     extraction_confidence NUMERIC(4, 3) DEFAULT 0.950
 );
 
--- 5. REPORT ADDRESSES
+-- 6. REPORT ADDRESSES
 CREATE TABLE IF NOT EXISTS report_addresses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     snapshot_id UUID REFERENCES report_snapshots(id) ON DELETE CASCADE,
@@ -61,7 +89,7 @@ CREATE TABLE IF NOT EXISTS report_addresses (
     source_page INT DEFAULT 1
 );
 
--- 6. CHANGE ITEMS
+-- 7. CHANGE ITEMS
 CREATE TABLE IF NOT EXISTS change_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -80,7 +108,7 @@ CREATE TABLE IF NOT EXISTS change_items (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. RECOVERY PACKETS
+-- 8. RECOVERY PACKETS
 CREATE TABLE IF NOT EXISTS recovery_packets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -94,7 +122,7 @@ CREATE TABLE IF NOT EXISTS recovery_packets (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. PACKET DOCUMENTS
+-- 9. PACKET DOCUMENTS
 CREATE TABLE IF NOT EXISTS packet_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     packet_id UUID REFERENCES recovery_packets(id) ON DELETE CASCADE,
@@ -106,7 +134,7 @@ CREATE TABLE IF NOT EXISTS packet_documents (
     reviewed_by_user_at TIMESTAMPTZ
 );
 
--- 9. TASKS (TIME-SERIES DEADLINE TRACKER)
+-- 10. TASKS (TIME-SERIES DEADLINE TRACKER)
 CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     packet_id UUID REFERENCES recovery_packets(id) ON DELETE CASCADE,
@@ -126,7 +154,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     completed_at TIMESTAMPTZ
 );
 
--- 10. AUDIT EVENTS
+-- 11. AUDIT EVENTS
 CREATE TABLE IF NOT EXISTS audit_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,

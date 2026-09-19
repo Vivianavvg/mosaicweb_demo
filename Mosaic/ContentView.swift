@@ -74,6 +74,9 @@ struct ContentView: View {
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .inactive || newPhase == .background {
                 appState.lockForBackground()
+                Task { @MainActor in
+                    await appState.syncToCloud()
+                }
             }
         }
         .onAppear {
@@ -107,6 +110,9 @@ struct ContentView: View {
                         appState.userSub = user.sub
                         appState.isAuthenticated = true
                     }
+                    if case .success(let credentials) = result {
+                        appState.configureCloud(accessToken: credentials.idToken)
+                    }
                 }
                 isLoading = false
             }
@@ -138,6 +144,7 @@ struct ContentView: View {
                     appState.userSub = u.sub
                 }
                 appState.isAuthenticated = true
+                appState.configureCloud(accessToken: credentials.idToken)
                 isAuthenticating = false
             case .failure(let error):
                 isAuthenticating = false
@@ -160,6 +167,7 @@ struct ContentView: View {
                 self.isAuthenticating = false
                 appState.isAuthenticated = false
                 appState.isDemoMode = false
+                appState.clearCloudCredentials()
             }
-    }
+        }
 }

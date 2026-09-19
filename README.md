@@ -214,6 +214,20 @@ Apply the schema with the database connection configured for the environment:
 psql "$DATABASE_URL" -f server/schema.sql
 ```
 
+### iPhone cloud sync
+
+The iOS client uses the API as the source of truth for structured workspace state: report snapshots, redacted change items, classifications, recovery packets, tasks, the letter profile, and analytics. The original PDF remains encrypted in the iOS container and is not uploaded by the sync endpoint.
+
+Set the API base URL in the local ignored `Mosaic/Secrets.plist` or through the `MOSAIC_API_BASE_URL` environment value:
+
+```text
+MOSAIC_API_BASE_URL=https://your-deployed-api.example.com
+```
+
+The API verifies the Auth0 ID token and associates the workspace with its Auth0 `sub`. Any user who successfully authenticates through the configured Auth0 application can sign in, including `skmpe15@gmail.com`; the email is not hardcoded in the client. The user must exist and be enabled in Auth0 User Management.
+
+For a physical iPhone, use an HTTPS API hostname reachable from the device. `localhost` points to the phone itself, not the development Mac. Configure the server with `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_AUDIENCE`, apply `server/schema.sql`, then configure automatic signing and the Auth0 callback settings in Xcode.
+
 ## Core privacy and safety principles
 
 - **Original documents stay local.** The source PDF is processed in the iOS container.

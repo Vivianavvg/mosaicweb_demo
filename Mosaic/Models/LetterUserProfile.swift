@@ -1,6 +1,6 @@
 import Foundation
 
-public struct LetterUserProfile: Equatable {
+public struct LetterUserProfile: Codable, Equatable {
     public var fullName: String
     public var mailingAddress: String
     public var phone: String

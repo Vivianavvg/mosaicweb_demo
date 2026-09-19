@@ -42,6 +42,10 @@ public final class AppState: ObservableObject {
     @Published public var statusMessage: String? = nil
     /// Tab index requested by a workflow action, such as Ask Mosaic creating a draft.
     @Published public var requestedTabIndex: Int? = nil
+    /// Draft that should receive first attention after a workflow opens Letters.
+    @Published public var requestedRecoveryPacketID: UUID? = nil
+    @Published public private(set) var isCloudSynced: Bool = false
+    @Published public private(set) var cloudSyncError: String?
 
     @Published public var letterProfile = LetterUserProfile()
 
@@ -59,6 +63,87 @@ public final class AppState: ObservableObject {
 
     public init() {
         isBiometricLockEnabled = UserDefaults.standard.bool(forKey: "mosaic.app-lock-enabled")
+    }
+
+    /// Configures the authenticated API session and restores the user's cloud workspace.
+    /// The API is the source of truth for structured workflow state after sign-in.
+    public func configureCloud(accessToken: String?) {
+        MosaicAPIService.shared.configure(accessToken: accessToken)
+        isCloudSynced = false
+        cloudSyncError = nil
+        guard accessToken?.isEmpty == false else { return }
+        Task { @MainActor in
+            await restoreCloudWorkspace()
+        }
+    }
+
+    public func clearCloudCredentials() {
+        MosaicAPIService.shared.clearCredentials()
+        isCloudSynced = false
+        cloudSyncError = nil
+    }
+
+    private var workspaceState: WorkspaceState {
+        WorkspaceState(
+            priorSnapshot: priorSnapshot,
+            currentSnapshot: currentSnapshot,
+            changeItems: changeItems,
+            recoveryPackets: recoveryPackets,
+            tasks: tasks,
+            savedItems: savedItems,
+            analytics: analytics,
+            letterProfile: letterProfile
+        )
+    }
+
+    private func scheduleCloudSync() {
+        guard MosaicAPIService.shared.isConfigured else { return }
+        Task { @MainActor in
+            await syncToCloud()
+        }
+    }
+
+    private func restoreCloudWorkspace() async {
+        guard MosaicAPIService.shared.isConfigured else { return }
+        do {
+            if let workspace = try await MosaicAPIService.shared.fetchWorkspace() {
+                priorSnapshot = workspace.priorSnapshot
+                currentSnapshot = workspace.currentSnapshot
+                changeItems = workspace.changeItems
+                recoveryPackets = workspace.recoveryPackets
+                tasks = workspace.tasks
+                savedItems = workspace.savedItems
+                analytics = workspace.analytics
+                letterProfile = workspace.letterProfile
+                isDemoMode = workspace.currentSnapshot?.isSynthetic == true
+            } else if hasStructuredWorkspaceData {
+                try await MosaicAPIService.shared.saveWorkspace(workspaceState)
+            }
+            isCloudSynced = true
+            cloudSyncError = nil
+        } catch {
+            isCloudSynced = false
+            cloudSyncError = error.localizedDescription
+            print("Mosaic cloud restore failed: \(error.localizedDescription)")
+        }
+    }
+
+    public func syncToCloud() async {
+        guard MosaicAPIService.shared.isConfigured else { return }
+        do {
+            try await MosaicAPIService.shared.saveWorkspace(workspaceState)
+            isCloudSynced = true
+            cloudSyncError = nil
+        } catch {
+            isCloudSynced = false
+            cloudSyncError = error.localizedDescription
+            print("Mosaic cloud sync failed: \(error.localizedDescription)")
+        }
+    }
+
+    private var hasStructuredWorkspaceData: Bool {
+        priorSnapshot != nil || currentSnapshot != nil || !changeItems.isEmpty ||
+            !recoveryPackets.isEmpty || !tasks.isEmpty || !savedItems.isEmpty
     }
 
     /// Logs in with demo mode bypass for judging and local test runs
@@ -99,6 +184,7 @@ public final class AppState: ObservableObject {
             isDemoMode = true
             loadSyntheticDemo()
         }
+        scheduleCloudSync()
 
         return (isSynthetic: extraction.isSynthetic, pageCount: extraction.pageCount)
     }
@@ -134,6 +220,7 @@ public final class AppState: ObservableObject {
         self.analytics = TigerDataService.shared.fetchSummary()
         isAnalyzing = false
         statusMessage = nil
+        scheduleCloudSync()
     }
 
     private func seedDefaultPacketAndTasks(for changes: [ChangeItem], snapshotId: UUID) {
@@ -256,6 +343,8 @@ public final class AppState: ObservableObject {
             recoveryPackets[updatedPacketIndex].documents[updatedDocumentIndex].draftText = draft
             recoveryPackets[updatedPacketIndex].documents[updatedDocumentIndex].generatedBy = "gemini-3.6-flash"
         }
+
+        scheduleCloudSync()
     }
 
     private func demoItemName(for change: ChangeItem) -> String {
@@ -326,6 +415,7 @@ public final class AppState: ObservableObject {
         }
 
         BackboardService.shared.updateWorkflowState("reviewed_\(classification.rawValue)")
+        scheduleCloudSync()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
             if self.reviewFeedback != nil {
@@ -384,6 +474,7 @@ public final class AppState: ObservableObject {
 
         isAnalyzing = false
         statusMessage = nil
+        scheduleCloudSync()
     }
 
     /// Updates task status and recalculates time-series analytics immediately
@@ -398,6 +489,7 @@ public final class AppState: ObservableObject {
             }
             TigerDataService.shared.recordTaskStatusChange(task: tasks[index], previousStatus: previous)
             self.analytics = TigerDataService.shared.fetchSummary()
+            scheduleCloudSync()
         }
     }
 
@@ -411,6 +503,7 @@ public final class AppState: ObservableObject {
         tasks.removeAll()
         savedItems.removeAll()
         reviewFeedback = nil
+        requestedRecoveryPacketID = nil
         letterProfile = LetterUserProfile()
         isDemoMode = false
         undoSnapshot = nil
@@ -433,6 +526,18 @@ public final class AppState: ObservableObject {
             countsByChangeType: [],
             lastUpdated: Date()
         )
+        if MosaicAPIService.shared.isConfigured {
+            Task { @MainActor in
+                do {
+                    try await MosaicAPIService.shared.deleteWorkspace()
+                    isCloudSynced = true
+                    cloudSyncError = nil
+                } catch {
+                    isCloudSynced = false
+                    cloudSyncError = error.localizedDescription
+                }
+            }
+        }
     }
 
     /// Unlocks app with biometric prompt
@@ -461,5 +566,6 @@ public final class AppState: ObservableObject {
         canUndoLastReview = false
         lastReviewedItemID = nil
         reviewFeedback = "Review undone. Choose a different answer when you are ready."
+        scheduleCloudSync()
     }
 }

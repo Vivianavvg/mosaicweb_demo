@@ -7,10 +7,12 @@ public struct SecretsConfig {
 
     public let geminiApiKey: String
     public let backboardApiKey: String
+    public let mosaicAPIBaseURL: String
 
     public init() {
         var gemini = ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? ""
         var backboard = ProcessInfo.processInfo.environment["BACKBOARD_API_KEY"] ?? ""
+        var mosaicAPI = ProcessInfo.processInfo.environment["MOSAIC_API_BASE_URL"] ?? ""
 
         // Load from local Secrets.plist if present in the main bundle
         if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
@@ -21,9 +23,13 @@ public struct SecretsConfig {
             if backboard.isEmpty, let val = dict["BACKBOARD_API_KEY"] as? String, !val.isEmpty, !val.hasPrefix("YOUR_") {
                 backboard = val
             }
+            if mosaicAPI.isEmpty, let val = dict["MOSAIC_API_BASE_URL"] as? String, !val.isEmpty, !val.hasPrefix("YOUR_") {
+                mosaicAPI = val
+            }
         }
 
         self.geminiApiKey = gemini
         self.backboardApiKey = backboard
+        self.mosaicAPIBaseURL = mosaicAPI.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 }
