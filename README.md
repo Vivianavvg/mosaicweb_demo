@@ -1,8 +1,112 @@
-# Mosaic — Financial Control & Credit Health iOS Agent
+<p align="center">
+  <img src="Mosaic/Assets.xcassets/MosaicLogo.imageset/MosaicLogo.png" width="260" alt="Mosaic">
+</p>
 
-Mosaic is a privacy-first native iPhone application that helps people understand changes in their credit file, decide what deserves attention, and organize a documented next step. The experience is designed around clarity and user control: sensitive source documents are processed locally, AI assistance works from bounded report facts, and every recovery action remains a draft for personal review.
+<p align="center">
+  <strong>A normal, discreet reason to check your credit.</strong><br>
+  Mosaic turns an unfamiliar change into an organized, source-linked recovery plan without deciding what happened for you.
+</p>
 
-The product flow is intentionally structured as a progression from evidence to agency:
+<p align="center">
+  <img src="https://img.shields.io/badge/iOS-16%2B-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS 16+">
+  <img src="https://img.shields.io/badge/Swift-5-F05138?style=for-the-badge&logo=swift&logoColor=white" alt="Swift 5">
+  <img src="https://img.shields.io/badge/SwiftUI-0071E3?style=for-the-badge&logo=swift&logoColor=white" alt="SwiftUI">
+  <img src="https://img.shields.io/badge/Xcode-16%2B-147EFB?style=for-the-badge&logo=xcode&logoColor=white" alt="Xcode 16+">
+  <img src="https://img.shields.io/badge/Auth0-EB5424?style=for-the-badge&logo=auth0&logoColor=white" alt="Auth0">
+  <img src="https://img.shields.io/badge/Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini">
+  <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js 18+">
+  <img src="https://img.shields.io/badge/PostgreSQL-Timescale-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL / Timescale">
+</p>
+
+<p align="center">
+  <a href="#product-preview">Preview</a>
+  &nbsp;·&nbsp;
+  <a href="#tech-stack">Tech stack</a>
+  &nbsp;·&nbsp;
+  <a href="#architecture">Architecture</a>
+  &nbsp;·&nbsp;
+  <a href="#quick-start">Quick start</a>
+  &nbsp;·&nbsp;
+  <a href="#privacy">Privacy</a>
+</p>
+
+---
+
+Mosaic gives women a normal, discreet reason to check their credit. It turns an unfamiliar change into an organized, source-linked recovery plan without deciding what happened for them.
+
+Checking a report looks like ordinary financial hygiene. Mosaic shows what changed, keeps every finding tied to the source page, and prepares editable drafts the user reviews herself. Original documents stay on-device. Assistance only sees redacted report facts. Mosaic never names a cause or submits a dispute.
+
+<table>
+  <tr>
+    <td width="56" align="center" valign="top">
+      <img src="https://api.iconify.design/octicon:eye-24.svg?color=%233423A6" width="22" height="22" alt="">
+    </td>
+    <td>
+      <strong>A discreet check-in.</strong> Opening Mosaic looks like reviewing credit, not investigating a crisis.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <img src="https://api.iconify.design/octicon:diff-24.svg?color=%233423A6" width="22" height="22" alt="">
+    </td>
+    <td>
+      <strong>See what changed.</strong> Mosaic extracts, redacts, and compares report snapshots with source-page context.
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <img src="https://api.iconify.design/octicon:pencil-24.svg?color=%233423A6" width="22" height="22" alt="">
+    </td>
+    <td>
+      <strong>Stay in control.</strong> Letters, checklists, and packets are editable drafts. Mosaic does not decide what happened, and never submits a dispute.
+    </td>
+  </tr>
+</table>
+
+<br>
+
+<h2 id="product-preview">
+  <img src="https://api.iconify.design/octicon:device-mobile-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Product preview
+</h2>
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-signin.jpg" width="240" alt="Mosaic sign-in screen"><br>
+      <strong>Sign in</strong><br>
+      <sub>A calm start. Mosaic never submits anything for you.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-home.jpg" width="240" alt="Mosaic home screen before a report is imported"><br>
+      <strong>Home</strong><br>
+      <sub>Add a report, then ask Mosaic what to do next.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-ask.jpg" width="240" alt="Mosaic home screen with a source-linked decision brief"><br>
+      <strong>Mosaic's read</strong><br>
+      <sub>What matters, a next action, and what Mosaic can prepare.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-letters.jpg" width="240" alt="Mosaic letters tab with editable recovery drafts"><br>
+      <strong>Letters</strong><br>
+      <sub>Editable drafts you review before mailing.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-locked.jpg" width="240" alt="Mosaic lock screen with Face ID unlock"><br>
+      <strong>Locked</strong><br>
+      <sub>Face ID or passcode keeps the workspace private.</sub>
+    </td>
+    <td></td>
+  </tr>
+</table>
+
+<br>
+
+<details>
+<summary><strong>Product flow</strong></summary>
 
 ```text
 credit-report PDF or synthetic fixture
@@ -16,103 +120,120 @@ credit-report PDF or synthetic fixture
   -> record privacy-bounded workflow analytics
 ```
 
-## Architecture at a glance
+</details>
 
-The system is intentionally local-first: the iOS client owns the original report and the decision workflow, while external services receive only bounded, redacted context.
+---
+
+<h2 id="tech-stack">
+  <img src="https://api.iconify.design/octicon:stack-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Tech stack
+</h2>
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=swift,apple,nodejs,express,postgres,git" alt="Swift, Apple, Node.js, Express, PostgreSQL, Git">
+</p>
+
+### Client
+
+| | Technology | Role |
+|---|---|---|
+| <img src="https://cdn.simpleicons.org/swift/F05138" width="18" height="18" alt=""> | **Swift 5** · SwiftUI · iOS 16+ | Native screens, navigation, and state-driven workflows |
+| <img src="https://cdn.simpleicons.org/xcode/147EFB" width="18" height="18" alt=""> | **Xcode 16+** · SF Symbols | Build, signing, and platform-native controls |
+| <img src="https://cdn.simpleicons.org/apple/555555" width="18" height="18" alt=""> | **PDFKit** · Vision · CryptoKit | On-device extraction, OCR fallback, AES-GCM encryption |
+| <img src="https://cdn.simpleicons.org/apple/555555" width="18" height="18" alt=""> | **Keychain** · LocalAuthentication | Face ID / passcode lock and protected file keys |
+| <img src="https://cdn.simpleicons.org/apple/555555" width="18" height="18" alt=""> | **AVFoundation** · Speech | Optional voice input for questions and notes |
+
+### Services
+
+| | Technology | Role |
+|---|---|---|
+| <img src="https://cdn.simpleicons.org/auth0/EB5424" width="18" height="18" alt=""> | **Auth0.swift 2.22** · JWTDecode · SimpleKeychain | Universal Login, session renewal, secure credentials |
+| <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="18" height="18" alt=""> | **Google Gemini** via `GeminiService` | Summaries, explanations, recommended steps, editable drafts |
+| <img src="https://api.iconify.design/octicon:comment-discussion-24.svg?color=%233423A6" width="18" height="18" alt=""> | **Backboard** via `BackboardService` | Privacy-bounded conversation continuity and workflow memory |
+| <img src="https://cdn.simpleicons.org/timescale/FDB515" width="18" height="18" alt=""> | **Tiger Data / Timescale** via `TigerDataService` | Redacted analytics, audit events, local fallback |
+
+### Optional API
+
+| | Technology | Role |
+|---|---|---|
+| <img src="https://cdn.simpleicons.org/nodedotjs/339933" width="18" height="18" alt=""> | **Node.js 18+** · Express 4 | `/v1` reports, changes, packets, tasks, and workspace sync |
+| <img src="https://cdn.simpleicons.org/postgresql/4169E1" width="18" height="18" alt=""> | **PostgreSQL** · `pg` | Timescale-compatible persistence for workflow facts |
+| <img src="https://cdn.simpleicons.org/auth0/EB5424" width="18" height="18" alt=""> | **Auth0 JWKS** | Verifies the iOS ID token and scopes workspace by `sub` |
+
+The app is the source of truth for the original PDF. The API only receives identifiers and workflow facts that have already passed the privacy boundary.
+
+---
+
+<h2 id="architecture">
+  <img src="https://api.iconify.design/octicon:workflow-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Architecture
+</h2>
+
+The system is local-first. The app owns the original report and the decision workflow. External services receive only bounded, redacted context.
 
 ```mermaid
 flowchart TB
-    USER((User))
+    User([User])
 
-    subgraph IOS["Mosaic iOS client · Swift 5 / SwiftUI"]
-        UI["SwiftUI surfaces<br/>Home · Review · Letters · Learn · Settings"]
-        STATE["AppState<br/>Observable workflow state"]
-        MODELS["Domain models<br/>Reports · Changes · Packets · Tasks"]
-
-        subgraph LOCAL["On-device privacy boundary"]
-            PICKER["Document picker"]
-            SECURITY["SecurityManager<br/>CryptoKit AES-GCM · Keychain<br/>file protection · Face ID/passcode"]
-            EXTRACT["PDFExtractionService<br/>PDFKit + Vision OCR"]
-            REDACT["RedactionEngine<br/>mask sensitive identifiers"]
-            DIFF["ReportDiffEngine<br/>compare report snapshots"]
-        end
-
-        WORKFLOW["Recovery workflow<br/>editable drafts · checklists · deadlines"]
-        EXPORT["PDFPacketExporter<br/>user-controlled export"]
+    subgraph phone [App]
+        UI[SwiftUI]
+        State[AppState]
+        Local[Pick encrypt extract redact diff]
+        Drafts[Drafts checklists export]
+        UI --- State
+        State --- Local
+        State --- Drafts
     end
 
-    subgraph SERVICES["Bounded assistance services"]
-        AUTH0["Auth0.swift<br/>Universal Login + secure session"]
-        GEMINI["GeminiService<br/>summaries · explanations · drafts"]
-        BACKBOARD["BackboardService<br/>redacted continuity + safe memory"]
-        TIGER["TigerDataService<br/>privacy-bounded analytics + local fallback"]
+    subgraph cloud [Bounded services]
+        Auth0[Auth0]
+        Gemini[Gemini]
+        Backboard[Backboard]
+        Tiger[Tiger Data]
     end
 
-    subgraph SERVER["Optional Node service"]
-        EXPRESS["Node.js + Express<br/>/v1 reports · changes · packets · tasks"]
-        PG["pg driver → Tiger Data / Timescale PostgreSQL"]
+    subgraph api [Optional API]
+        Express[Express]
+        DB[(Timescale)]
+        Express --- DB
     end
 
-    USER --> UI
-    UI <--> STATE
-    STATE --> MODELS
-    UI --> AUTH0
-    STATE --> PICKER
-    PICKER --> SECURITY --> EXTRACT --> REDACT --> DIFF --> STATE
-    STATE --> WORKFLOW --> EXPORT
-    REDACT -. "redacted report facts only" .-> GEMINI
-    STATE -. "safe workflow state" .-> BACKBOARD
-    STATE -. "event counters / summaries" .-> TIGER
-    TIGER -. "optional sync" .-> EXPRESS --> PG
-
+    User --> UI
+    UI --> Auth0
+    Local -.-> Gemini
+    State -.-> Backboard
+    State -.-> Tiger
+    Tiger -.-> Express
 ```
 
-### Runtime path: importing a report and taking action
+Redacted report facts go to Gemini. Safe workflow state goes to Backboard. Event counters go to Tiger Data, which can optionally sync to Express.
 
-This sequence is the product’s core trust model: source documents remain on-device, assistance is constrained to redacted facts, and the user confirms every external action.
+### Runtime path
+
+Source documents remain on-device. Assistance is constrained to redacted facts. The user confirms every external action.
 
 ```mermaid
 sequenceDiagram
+    autonumber
     actor User
-    participant Home as SwiftUI Home
-    participant State as AppState
-    participant Secure as SecurityManager
-    participant PDF as PDFKit / Vision
-    participant Diff as ReportDiffEngine
+    participant App as Mosaic
+    participant Device as On-device
     participant AI as Gemini / Backboard
-    participant Workflow as Drafts + Tasks
 
-    User->>Home: Tap Add a credit report
-    Home->>State: Select PDF with document picker
-    State->>Secure: Encrypt local copy with CryptoKit
-    Secure-->>State: Protected local file + Keychain key
-    State->>PDF: Decrypt in memory and extract text/pages
-    PDF->>Diff: Normalize report facts and compare snapshots
-    Diff-->>State: Source-linked changes
-    State->>AI: Send only redacted summaries and categories
-    AI-->>State: Plain-language explanation or draft suggestion
-    State->>Workflow: Create editable packet and follow-up tasks
-    User->>Workflow: Review, edit, export, and decide what to send
+    User->>App: Add a credit report
+    App->>Device: Encrypt, extract, redact, compare
+    Device-->>App: Source-linked changes
+    App->>AI: Redacted facts only
+    AI-->>App: Explanation or draft
+    App-->>User: Review, edit, export
 ```
 
-## Technology stack
+---
 
-| Layer | Technology | Responsibility |
-|---|---|---|
-| App client | Swift 5, SwiftUI, iOS 16+ deployment target | Native screens, navigation, state-driven workflows, accessibility, and device integration |
-| Authentication | Auth0.swift 2.22, JWTDecode, SimpleKeychain | Universal Login, credential renewal, secure session storage, and identity context |
-| Document processing | Apple PDFKit and Vision | Local PDF reading, scanned-page OCR fallback, page references, and report preview |
-| Privacy and security | CryptoKit, Keychain, LocalAuthentication, security-scoped file access | AES-GCM encrypted local PDFs, Face ID/passcode unlock, temporary-file handling, and privacy controls |
-| Report intelligence | `PDFExtractionService`, `RedactionEngine`, `ReportDiffEngine` | Convert source documents into masked, normalized report facts and explainable differences |
-| AI assistance | `GeminiService`, Google Gemini API | Short summaries, plain-language explanations, recommended next steps, and editable document drafts |
-| Workflow continuity | `BackboardService`, Backboard REST API | Privacy-bounded conversation continuity and workflow memory without sending original report documents |
-| Analytics and persistence | `TigerDataService`, Node.js, Express, `pg`, Tiger Data / Timescale PostgreSQL | Redacted workflow events, task progress, audit records, and time-series summaries with a local fallback |
-| Audio interaction | AVFoundation and Speech | Optional voice input for asking questions or recording a note for the workflow |
-| Interface system | Apple SF Symbols, SwiftUI materials, Mosaic liquid-glass components | Consistent navigation, controls, feedback states, and platform-native visual behavior |
-
-The client is the primary product surface. The optional backend receives identifiers and workflow facts that have already passed through the app’s privacy boundary; it is not the source of truth for the original PDF.
-
-## Repository structure
+<h2>
+  <img src="https://api.iconify.design/octicon:file-directory-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Repository structure
+</h2>
 
 ```text
 Mosaic/
@@ -123,7 +244,7 @@ Mosaic/
 │   └── AppState.swift              Shared session and workflow state
 ├── Models/                         Report, change, packet, task, and analytics models
 ├── Services/
-│   ├── PDFExtractionService.swift  PDFKit/Vision extraction
+│   ├── PDFExtractionService.swift  PDFKit / Vision extraction
 │   ├── RedactionEngine.swift       Local identifier masking
 │   ├── ReportDiffEngine.swift      Snapshot comparison
 │   ├── GeminiService.swift         AI summaries and draft generation
@@ -148,20 +269,36 @@ server/
 └── package.json                    Node runtime dependencies and start command
 ```
 
-## Data flow and privacy boundary
+---
+
+<h2 id="privacy">
+  <img src="https://api.iconify.design/octicon:lock-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Privacy
+</h2>
 
 1. The user selects a report PDF through the iOS document picker.
-2. `SecurityManager` stores an AES-GCM encrypted local copy using a Keychain-held key and file protection.
-3. `PDFExtractionService` decrypts the protected copy in memory, reads digital text locally, and uses Vision when a page needs OCR.
-4. `RedactionEngine` masks sensitive identifiers before any AI or service request is built.
-5. `ReportDiffEngine` compares normalized snapshots and preserves source-page references.
-6. Gemini and Backboard receive only the bounded, redacted facts needed for a response or draft.
-7. The user reviews, edits, exports, and sends any document themselves. Mosaic does not submit disputes automatically.
-8. Tiger Data / Timescale stores workflow-level analytics and audit events, not original unredacted PDFs.
+2. `SecurityManager` stores an AES-GCM encrypted local copy using a Keychain-held key.
+3. `PDFExtractionService` decrypts in memory, reads digital text locally, and uses Vision when a page needs OCR.
+4. `RedactionEngine` masks identifiers before any AI or service request is built.
+5. `ReportDiffEngine` compares normalized snapshots and keeps source-page references.
+6. Gemini and Backboard receive only the bounded, redacted facts needed for a response.
+7. The user reviews, edits, exports, and sends any document themselves.
+8. Tiger Data / Timescale stores workflow-level analytics, not original unredacted PDFs.
 
-The privacy model is deliberately layered: local source handling first, redaction second, bounded assistance third, and user confirmation before any external action.
+| Principle | Meaning |
+|---|---|
+| Original documents stay local | The source PDF is processed in the iOS container |
+| Identifiers are masked first | SSNs, full account numbers, addresses, phones, and emails are redacted before cloud prompts |
+| Language stays factual | The app describes changes without declaring fraud, identity theft, or a legal outcome |
+| The user stays in control | Mosaic never submits a dispute automatically |
+| Safety is first-class | Face ID / passcode lock, discreet notifications, temp-file cleanup, and emergency data removal |
 
-## Requirements
+---
+
+<h2>
+  <img src="https://api.iconify.design/octicon:tools-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Requirements
+</h2>
 
 - Xcode 16+
 - iOS 16.0+ deployment target
@@ -169,7 +306,12 @@ The privacy model is deliberately layered: local source handling first, redactio
 - Node.js 18+ for the optional API server
 - PostgreSQL-compatible Tiger Data / Timescale instance for hosted analytics
 
-## Quick start
+---
+
+<h2 id="quick-start">
+  <img src="https://api.iconify.design/octicon:rocket-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Quick start
+</h2>
 
 1. Open the project in Xcode:
 
@@ -183,21 +325,26 @@ The privacy model is deliberately layered: local source handling first, redactio
 
 4. For an authenticated session, configure Auth0 and use the app’s native sign-in flow.
 
-## Configuration
+---
+
+<h2>
+  <img src="https://api.iconify.design/octicon:gear-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Configuration
+</h2>
 
 ### Auth0
 
-Auth0 is configured for a native iOS application. The project stores the local callback configuration in `Mosaic/Auth0.plist`; `Configure.swift` can update environment-specific values without changing the app architecture.
+Auth0 is configured for a native iOS application. Local callback settings live in `Mosaic/Auth0.plist`. `Configure.swift` can update environment-specific values without changing the app architecture.
 
 The callback and logout URLs must match the application’s bundle identifier and the callback mode selected in `Mosaic/Auth0.plist`.
 
 ### Gemini
 
-The iOS service reads the Gemini configuration through `SecretsConfig`. The optional server reads `GEMINI_API_KEY` from its environment. Keep keys out of source control and use `Mosaic/Secrets.example.plist` as the local configuration template.
+The iOS service reads Gemini configuration through `SecretsConfig`. The optional server reads `GEMINI_API_KEY` from its environment. Keep keys out of source control and use `Mosaic/Secrets.example.plist` as the local template.
 
 ### Tiger Data / Timescale
 
-The server uses PostgreSQL-compatible `pg` connections and can run with a local in-memory fallback when the database is unavailable. To configure a hosted instance:
+The server uses PostgreSQL-compatible `pg` connections and can run with a local in-memory fallback when the database is unavailable.
 
 ```bash
 cd server
@@ -216,27 +363,24 @@ psql "$DATABASE_URL" -f server/schema.sql
 
 ### iPhone cloud sync
 
-The iOS client uses the API as the source of truth for structured workspace state: report snapshots, redacted change items, classifications, recovery packets, tasks, the letter profile, and analytics. The original PDF remains encrypted in the iOS container and is not uploaded by the sync endpoint.
+The iOS client uses the API as the source of truth for structured workspace state: report snapshots, redacted change items, classifications, recovery packets, tasks, the letter profile, and analytics. The original PDF remains encrypted in the iOS container and is not uploaded.
 
-Set the API base URL in the local ignored `Mosaic/Secrets.plist` or through the `MOSAIC_API_BASE_URL` environment value:
+Set the API base URL in the local ignored `Mosaic/Secrets.plist` or through `MOSAIC_API_BASE_URL`:
 
 ```text
 MOSAIC_API_BASE_URL=https://your-deployed-api.example.com
 ```
 
-The API verifies the Auth0 ID token and associates the workspace with its Auth0 `sub`. Any user who successfully authenticates through the configured Auth0 application can sign in, including `skmpe15@gmail.com`; the email is not hardcoded in the client. The user must exist and be enabled in Auth0 User Management.
+The API verifies the Auth0 ID token and associates the workspace with its Auth0 `sub`. Any user who successfully authenticates through the configured Auth0 application can sign in. The user must exist and be enabled in Auth0 User Management.
 
 For a physical iPhone, use an HTTPS API hostname reachable from the device. `localhost` points to the phone itself, not the development Mac. Configure the server with `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_AUDIENCE`, apply `server/schema.sql`, then configure automatic signing and the Auth0 callback settings in Xcode.
 
-## Core privacy and safety principles
+---
 
-- **Original documents stay local.** The source PDF is processed in the iOS container.
-- **Identifiers are masked before assistance.** SSNs, full account numbers, addresses, phone numbers, and email addresses are redacted before cloud-bound prompts.
-- **Language stays factual.** The app describes changes and review needs without declaring fraud, abuse, identity theft, or a legal outcome.
-- **The user stays in control.** Letters, worksheets, and checklists are editable drafts; Mosaic never submits a dispute automatically.
-- **Safety controls are first-class.** Face ID/passcode locking, discreet notifications, temporary-file cleanup, and emergency data removal protect a sensitive workflow.
-
-## Development notes
+<h2>
+  <img src="https://api.iconify.design/octicon:book-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Development notes
+</h2>
 
 - Keep report parsing, redaction, and diffing deterministic and testable independently of network services.
 - Keep AI prompts limited to masked report facts and explicit user questions.
