@@ -3,9 +3,7 @@ import UniformTypeIdentifiers
 
 struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
-    @Binding var selectedTab: Int
 
-    @State private var assistantSummary = "Upload a credit report PDF to get started. Mosaic will read it on-device, explain each change, and help you decide what to review next."
     @State private var assistantReply: String?
     @State private var lastUserPrompt = ""
     @State private var prompt = ""
@@ -14,7 +12,17 @@ struct OverviewView: View {
     @State private var showImportMessage = false
     @State private var importMessage = ""
     @State private var isImporting = false
+    @State private var isClassifying = false
+    @State private var showMoreReviewOptions = false
     @FocusState private var isPromptFocused: Bool
+
+    private var pendingItems: [ChangeItem] {
+        appState.changeItems.filter { $0.classification == nil }
+    }
+
+    private var currentReviewItem: ChangeItem? {
+        pendingItems.first
+    }
 
     private var openTaskCount: Int {
         appState.tasks.filter { !$0.isCompleted }.count
@@ -27,19 +35,7 @@ struct OverviewView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     reportMetric
-                    header
-
-                    if appState.isDemoMode {
-                        HStack(alignment: .top, spacing: 10) {
-                            SyntheticBadge()
-                            Text("Sample data only — not your credit report.")
-                                .font(MosaicFont.regular(12))
-                                .foregroundColor(Color.mosaicSubtle)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 14)
-                    }
+                    uploadReportAction
 
                     VStack(alignment: .leading, spacing: 22) {
                         if !lastUserPrompt.isEmpty {
@@ -47,19 +43,9 @@ struct OverviewView: View {
                         }
 
                         if lastUserPrompt.isEmpty {
-                            Text("Your next step")
-                                .font(MosaicFont.medium(12))
-                                .tracking(0.6)
-                                .foregroundColor(Color.mosaicSubtle)
-
-                            Text(assistantSummary)
-                                .font(MosaicFont.regular(17))
-                                .foregroundColor(Color.mosaicInk)
-                                .lineSpacing(5)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            nextStepSection
                         } else if let assistantReply, !assistantReply.isEmpty {
-                            Text(assistantReply)
+                            assistantReplyView(assistantReply)
                                 .font(MosaicFont.regular(17))
                                 .foregroundColor(Color.mosaicInk)
                                 .lineSpacing(5)
@@ -74,30 +60,6 @@ struct OverviewView: View {
 
                         if lastUserPrompt.isEmpty {
                             suggestions
-
-                            Button {
-                                showFileImporter = true
-                            } label: {
-                                HStack(spacing: 10) {
-                                    if isImporting {
-                                        ProgressView()
-                                            .tint(Color.mosaicViolet)
-                                    } else {
-                                        Image(systemName: "doc.badge.plus")
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundColor(Color.mosaicViolet)
-                                    }
-
-                                    Text(isImporting ? "Reading report…" : "Add a credit report")
-                                        .font(MosaicFont.medium(15))
-                                        .foregroundColor(Color.mosaicInk)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 18, shadowRadius: 0)
-                            }
-                            .disabled(isImporting)
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -120,64 +82,321 @@ struct OverviewView: View {
         } message: {
             Text(importMessage)
         }
-        .task(id: appState.changeItems.count) {
-            await refreshAssistantSummary()
-        }
     }
 
     private var reportMetric: some View {
-        VStack(spacing: 5) {
-            Text("\(appState.changeItems.count)")
-                .font(MosaicFont.medium(54))
-                .foregroundColor(Color.mosaicInk)
-                .monospacedDigit()
-
-            Text("CHANGES TO REVIEW")
-                .font(MosaicFont.medium(11))
-                .tracking(1.2)
-                .foregroundColor(Color.mosaicSubtle)
-
-            HStack(spacing: 18) {
-                metricIndicator(icon: "rectangle.stack.fill", label: "Review", value: appState.changeItems.count)
-                metricIndicator(icon: "arrow.right.circle.fill", label: "Next", value: openTaskCount)
-                metricIndicator(icon: "checkmark.circle.fill", label: "Saved", value: appState.savedItems.count)
-            }
-            .padding(.top, 12)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 30)
-        .padding(.bottom, 26)
-    }
-
-    private func metricIndicator(icon: String, label: String, value: Int) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(Color.mosaicViolet)
-            Text(label)
-                .font(MosaicFont.medium(11))
-                .foregroundColor(Color.mosaicInk)
-            Text("\(value)")
-                .font(MosaicFont.regular(11))
-                .foregroundColor(Color.mosaicSubtle)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(value)")
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .center, spacing: 8) {
             Text("Your credit report")
-                .font(MosaicFont.medium(28))
+                .font(MosaicFont.medium(22))
                 .foregroundColor(Color.mosaicInk)
-            Text("Mosaic finds important changes, explains what they mean, and helps you decide what to do next.")
-                .font(MosaicFont.regular(15))
+                .multilineTextAlignment(.center)
+
+            netDebtIndicator
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(pendingItems.count)")
+                    .font(MosaicFont.medium(22))
+                    .foregroundColor(Color.mosaicInk)
+                    .monospacedDigit()
+                Text(pendingItems.count == 1 ? "change left to review" : "changes left to review")
+                    .font(MosaicFont.regular(13))
+                    .foregroundColor(Color.mosaicSubtle)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 20)
+        .padding(.top, 52)
+        .padding(.bottom, 22)
+    }
+
+    @ViewBuilder
+    private func assistantReplyView(_ reply: String) -> some View {
+        if let formattedReply = try? AttributedString(
+            markdown: reply,
+            options: .init(interpretedSyntax: .full)
+        ) {
+            Text(formattedReply)
+        } else {
+            Text(reply)
+        }
+    }
+
+    private var uploadReportAction: some View {
+        Button {
+            showFileImporter = true
+        } label: {
+            HStack(spacing: 9) {
+                if isImporting {
+                    ProgressView()
+                        .tint(Color.mosaicViolet)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Text(isImporting
+                     ? "Reading report…"
+                     : (appState.changeItems.isEmpty ? "Add a credit report" : "Import another report"))
+                    .font(MosaicFont.medium(15))
+            }
+            .foregroundColor(Color.mosaicViolet)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 18, shadowRadius: 0)
+        }
+        .disabled(isImporting)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 4)
+        .accessibilityLabel(appState.changeItems.isEmpty ? "Add a credit report" : "Import another credit report")
+        .accessibilityHint("Opens the PDF picker")
+    }
+
+    @ViewBuilder
+    private var netDebtIndicator: some View {
+        if let deltaCents = netBalanceDeltaCents {
+            let isAdded = deltaCents > 0
+            let isReduced = deltaCents < 0
+            let indicatorColor = isAdded ? Color.red : (isReduced ? Color.green : Color.mosaicSubtle)
+            let icon = isAdded ? "arrow.down.right" : (isReduced ? "arrow.up.right" : "arrow.right")
+            let label = isAdded ? "Net debt added" : (isReduced ? "Net debt reduced" : "No net debt change")
+
+            // Balance the leading trend icon with an invisible trailing rail so
+            // the amount itself stays mathematically centered in the screen.
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(indicatorColor)
+                    .frame(width: 28)
+                VStack(alignment: .center, spacing: 1) {
+                    Text(formattedCurrency(cents: abs(deltaCents)))
+                        .font(MosaicFont.medium(48))
+                        .foregroundColor(Color.mosaicInk)
+                        .monospacedDigit()
+                    Text(label.uppercased())
+                        .font(MosaicFont.medium(11))
+                        .tracking(1.1)
+                        .foregroundColor(Color.mosaicSubtle)
+                }
+                Color.clear
+                    .frame(width: 28, height: 28)
+                    .accessibilityHidden(true)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(label), \(formattedCurrency(cents: abs(deltaCents)))")
+        }
+    }
+
+    private var netBalanceDeltaCents: Int? {
+        guard let currentSnapshot = appState.currentSnapshot,
+              let priorSnapshot = appState.priorSnapshot else {
+            return nil
+        }
+
+        let priorBalances = Dictionary(
+            priorSnapshot.accounts.map { ($0.localFingerprint, $0.balanceCents ?? 0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let deltas = currentSnapshot.accounts.compactMap { account -> Int? in
+            guard let currentBalance = account.balanceCents else { return nil }
+            return currentBalance - (priorBalances[account.localFingerprint] ?? 0)
+        }
+
+        return deltas.isEmpty ? nil : deltas.reduce(0, +)
+    }
+
+    private func formattedCurrency(cents: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencySymbol = "$"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: Double(cents) / 100.0)) ?? "$0"
+    }
+
+    @ViewBuilder
+    private var nextStepSection: some View {
+        if let item = currentReviewItem {
+            reviewStepCard(for: item)
+        } else if appState.changeItems.isEmpty {
+            uploadReportCard
+        } else {
+            finishedReviewCard
+        }
+    }
+
+    private func reviewStepCard(for item: ChangeItem) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(item.changeType.displayName)
+                    .font(MosaicFont.medium(18))
+                    .foregroundColor(Color.mosaicInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 12)
+                Text("\(pendingItems.count) left")
+                    .font(MosaicFont.medium(12))
+                    .foregroundColor(Color.mosaicViolet)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color.mosaicLavender.opacity(0.7))
+                    .clipShape(Capsule())
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(item.summary)
+                    .font(MosaicFont.regular(15))
+                    .foregroundColor(Color.mosaicSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let deltaSummary = item.deltaSummary, !deltaSummary.isEmpty {
+                    Text(deltaSummary)
+                        .font(MosaicFont.medium(13))
+                        .foregroundColor(Color.mosaicViolet)
+                }
+            }
+
+            Text("Tell Mosaic whether this change is yours, unfamiliar, or unclear.")
+                .font(MosaicFont.regular(13))
                 .foregroundColor(Color.mosaicSubtle)
                 .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 8) {
+                reviewChoice(
+                    title: "I recognize it",
+                    subtitle: "Save it to my records",
+                    icon: "checkmark.circle.fill",
+                    tint: Color.mosaicTeal,
+                    classification: .recognized,
+                    item: item
+                )
+                reviewChoice(
+                    title: "I don't recognize it",
+                    subtitle: "Prepare a reviewable draft",
+                    icon: "exclamationmark.triangle.fill",
+                    tint: Color.mosaicViolet,
+                    classification: .unrecognized,
+                    item: item
+                )
+                reviewChoice(
+                    title: "I'm not sure yet",
+                    subtitle: "Remind me to check later",
+                    icon: "questionmark.circle.fill",
+                    tint: Color.mosaicIndigo,
+                    classification: .notSure,
+                    item: item
+                )
+            }
+
+            DisclosureGroup(isExpanded: $showMoreReviewOptions) {
+                VStack(spacing: 8) {
+                    reviewChoice(title: "Joint or shared", subtitle: "This may be shared with someone else", icon: "person.2.fill", tint: Color.mosaicViolet, classification: .jointOrShared, item: item)
+                    reviewChoice(title: "Authorized user", subtitle: "I may be listed on someone else's account", icon: "person.badge.key.fill", tint: Color.mosaicViolet, classification: .authorizedUser, item: item)
+                    reviewChoice(title: "Someone else opened it", subtitle: "I may not have opened this account", icon: "person.crop.circle.badge.exclamationmark", tint: Color.mosaicViolet, classification: .someoneElseOpened, item: item)
+                    reviewChoice(title: "I felt pressured or didn't consent", subtitle: "Create a safer follow-up path", icon: "hand.raised.fill", tint: Color.mosaicViolet, classification: .pressuredOrNotFreelyAgreed, item: item)
+                }
+                .padding(.top, 8)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "slider.horizontal.3")
+                    Text("More situations")
+                }
+                .font(MosaicFont.medium(13))
+                .foregroundColor(Color.mosaicViolet)
+            }
         }
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
+        .liquidGlass(tint: Color.white.opacity(0.78), cornerRadius: 26, shadowRadius: 8)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func reviewChoice(
+        title: String,
+        subtitle: String,
+        icon: String,
+        tint: Color,
+        classification: UserClassification,
+        item: ChangeItem
+    ) -> some View {
+        Button {
+            classify(item, as: classification)
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(tint)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(MosaicFont.medium(14))
+                        .foregroundColor(Color.mosaicInk)
+                    Text(subtitle)
+                        .font(MosaicFont.regular(12))
+                        .foregroundColor(Color.mosaicSubtle)
+                }
+
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color.mosaicMuted)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.52))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isClassifying)
+        .accessibilityLabel(title)
+        .accessibilityHint(subtitle)
+    }
+
+    private var uploadReportCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Start with a report", systemImage: "doc.badge.plus")
+                .font(MosaicFont.medium(19))
+                .foregroundColor(Color.mosaicInk)
+            Text("Add a credit report and Mosaic will turn it into a short, guided list of changes.")
+                .font(MosaicFont.regular(14))
+                .foregroundColor(Color.mosaicSubtle)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Use the Add a credit report button above to choose a PDF.")
+                .font(MosaicFont.regular(13))
+                .foregroundColor(Color.mosaicSubtle)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlass(tint: Color.white.opacity(0.72), cornerRadius: 26, shadowRadius: 8)
+    }
+
+    private var finishedReviewCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("You're caught up", systemImage: "checkmark.circle.fill")
+                .font(MosaicFont.medium(19))
+                .foregroundColor(Color.mosaicTeal)
+            Text("Mosaic has a decision for every change in this report.")
+                .font(MosaicFont.regular(14))
+                .foregroundColor(Color.mosaicSubtle)
+            if openTaskCount > 0 {
+                Text("You have \(openTaskCount) follow-up task\(openTaskCount == 1 ? "" : "s") to revisit.")
+                    .font(MosaicFont.medium(13))
+                    .foregroundColor(Color.mosaicInk)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlass(tint: Color.mosaicTeal.opacity(0.14), cornerRadius: 26, shadowRadius: 8)
+    }
+
+    private func classify(_ item: ChangeItem, as classification: UserClassification) {
+        guard !isClassifying else { return }
+        isClassifying = true
+        appState.classifyItem(itemId: item.id, classification: classification)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            isClassifying = false
+        }
     }
 
     private func userBubble(text: String) -> some View {
@@ -194,22 +413,21 @@ struct OverviewView: View {
     }
 
     private var suggestions: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Try asking")
-                .font(MosaicFont.medium(12))
-                .tracking(0.6)
+                .font(MosaicFont.medium(16))
                 .foregroundColor(Color.mosaicSubtle)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(suggestedQuestions, id: \.self) { question in
                     Button {
                         chooseSuggestion(question)
                     } label: {
                         HStack(spacing: 7) {
                             Image(systemName: "arrow.up.right")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                             Text(question)
-                                .font(MosaicFont.medium(13))
+                                .font(MosaicFont.medium(15))
                         }
                         .foregroundColor(Color.mosaicViolet)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -230,8 +448,8 @@ struct OverviewView: View {
     private var suggestedQuestions: [String] {
         if appState.changeItems.isEmpty {
             return [
-                "How do I upload a report?",
-                "What does my report show?",
+                "How do I get my report?",
+                "What changed?",
                 "What should I do first?"
             ]
         }
@@ -240,13 +458,13 @@ struct OverviewView: View {
             return [
                 "What should I review first?",
                 "Which task matters most?",
-                "Explain my biggest change"
+                "Explain the biggest change"
             ]
         }
 
         return [
             "What should I review first?",
-            "Explain my biggest change",
+            "Explain the biggest change",
             "What can I do next?"
         ]
     }
@@ -255,8 +473,8 @@ struct OverviewView: View {
         HStack(alignment: .center, spacing: 10) {
             ZStack(alignment: .leading) {
                 if prompt.isEmpty {
-                    Text("Ask what changed or what to do next")
-                        .font(MosaicFont.regular(15))
+                    Text("Ask Mosaic…")
+                        .font(MosaicFont.regular(14))
                         .foregroundColor(Color.mosaicSubtle)
                         .allowsHitTesting(false)
                 }
@@ -265,7 +483,7 @@ struct OverviewView: View {
                     .font(MosaicFont.regular(15))
                     .foregroundColor(Color.mosaicInk)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(1...4)
+                    .lineLimit(1...2)
                     .focused($isPromptFocused)
                     .submitLabel(.send)
                     .textInputAutocapitalization(.sentences)
@@ -273,13 +491,13 @@ struct OverviewView: View {
                     .onSubmit(submitPrompt)
                     .onTapGesture { isPromptFocused = true }
             }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture { isPromptFocused = true }
 
             Button(action: submitPrompt) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 25, weight: .semibold))
                     .foregroundColor(
                         prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             ? Color.mosaicMuted
@@ -290,33 +508,20 @@ struct OverviewView: View {
             .accessibilityLabel("Send message")
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 28, shadowRadius: 0)
+        .padding(.vertical, 9)
+        .liquidGlass(
+            tint: Color.white.opacity(0.18),
+            cornerRadius: 28,
+            borderOpacity: 0.86,
+            material: .ultraThinMaterial,
+            shadowRadius: 0
+        )
         .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
         .background(.clear)
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded { isPromptFocused = true })
-    }
-
-    private func refreshAssistantSummary() async {
-        assistantSummary = localSummary
-        let generatedSummary = await GeminiService.shared.generateOverviewSummary(
-            changeItems: appState.changeItems,
-            openTaskCount: openTaskCount
-        )
-        if !generatedSummary.isEmpty {
-            assistantSummary = generatedSummary
-        }
-    }
-
-    private var localSummary: String {
-        let changeCount = appState.changeItems.count
-        if changeCount == 0 {
-            return "Upload a credit report PDF to get started. Mosaic will read it on-device, explain each change, and help you decide what to review next."
-        }
-        return "You have \(changeCount) report change\(changeCount == 1 ? "" : "s") to review. Open Review to confirm what you recognize, or ask Mosaic to explain what matters first."
     }
 
     private func submitPrompt() {

@@ -22,6 +22,8 @@ public final class AppState: ObservableObject {
     @Published public var priorSnapshot: ReportSnapshot? = nil
     @Published public var currentSnapshot: ReportSnapshot? = nil
     @Published public var changeItems: [ChangeItem] = []
+    /// Recipient addresses found verbatim in the imported report, kept on-device.
+    @Published public var reportEmailCandidates: [String] = []
 
     // Recovery & Tasks
     @Published public var recoveryPackets: [RecoveryPacket] = []
@@ -73,8 +75,8 @@ public final class AppState: ObservableObject {
         loadSyntheticDemo()
     }
 
-    /// Reads a user-selected credit report and applies any recognized demo data.
-    /// Both Home and Review use this path so importing behaves the same everywhere.
+    /// Reads a user-selected credit report into memory, seals a local copy, then parses only decrypted bytes.
+    /// Synthetic detection remains unchanged for the explicit demo fixture path.
     public func importCreditReport(from url: URL) async throws -> (isSynthetic: Bool, pageCount: Int) {
         let secured = url.startAccessingSecurityScopedResource()
         defer {
@@ -83,7 +85,14 @@ public final class AppState: ObservableObject {
             }
         }
 
-        let extraction = try await PDFExtractionService.shared.extract(from: url)
+        let importedData = try Data(contentsOf: url, options: [.mappedIfSafe])
+        let encryptedURL = try SecurityManager.shared.encryptPDF(
+            importedData,
+            originalFilename: url.lastPathComponent
+        )
+        let protectedData = try SecurityManager.shared.decryptPDF(at: encryptedURL)
+        let extraction = try await PDFExtractionService.shared.extract(from: protectedData)
+        reportEmailCandidates = PDFExtractionService.shared.emailAddresses(in: extraction.pages)
         if extraction.isSynthetic {
             isDemoMode = true
             loadSyntheticDemo()
@@ -105,6 +114,9 @@ public final class AppState: ObservableObject {
 
         self.priorSnapshot = prior
         self.currentSnapshot = current
+        if !isDemoMode {
+            reportEmailCandidates = []
+        }
 
         // Run normalized diff
         let diffChanges = ReportDiffEngine.shared.diff(current: current, prior: prior)
@@ -122,84 +134,111 @@ public final class AppState: ObservableObject {
         recoveryPackets.removeAll()
         tasks.removeAll()
 
-        // Create recovery packet for the Collection item
-        if let collectionChange = changes.first(where: { $0.changeType == .collectionOrChargeoffChange }) {
+        // Demo-only packet set: each item is still unclassified in Review, but
+        // Letters shows several neutral, clearly synthetic draft scenarios.
+        let preferredScenarios: [(ChangeType, UserClassification)] = [
+            (.collectionOrChargeoffChange, .unrecognized),
+            (.jointOrAuthorizedUserChange, .jointOrShared),
+            (.balanceIncrease, .notSure),
+            (.newInquiry, .someoneElseOpened),
+            (.newAddress, .pressuredOrNotFreelyAgreed)
+        ]
+
+        let selectedChanges: [(ChangeItem, UserClassification)] = preferredScenarios.compactMap { type, classification in
+            guard let change = changes.first(where: { $0.changeType == type }) else { return nil }
+            return (change, classification)
+        }
+
+        let fallbackChanges = changes
+            .filter { change in !selectedChanges.contains(where: { $0.0.id == change.id }) }
+            .prefix(max(0, 5 - selectedChanges.count))
+            .map { ($0, UserClassification.notSure) }
+
+        let demoCases = Array((selectedChanges + fallbackChanges).prefix(5))
+        let calendar = Calendar.current
+        let now = Date()
+
+        for (index, scenario) in demoCases.enumerated() {
+            let change = scenario.0
+            let classification = scenario.1
             var packet = RecoveryPacket(
-                changeItemId: collectionChange.id,
-                classificationAtCreation: .unrecognized,
+                changeItemId: change.id,
+                classificationAtCreation: classification,
                 status: .readyForReview,
-                itemName: collectionChange.issuerName ?? "Harbor Recovery Collections",
-                itemLast4: collectionChange.relatedAccountLast4,
-                sourcePage: collectionChange.sourcePages.first ?? 3
+                itemName: change.issuerName ?? demoItemName(for: change),
+                itemLast4: change.relatedAccountLast4,
+                sourcePage: change.sourcePages.first ?? 1
             )
 
-            // Generate initial drafts
-            for docType in PacketDocumentType.allCases {
+            for documentType in PacketDocumentType.allCases {
                 let text = GeminiService.shared.generateDeterministicDraft(
-                    item: collectionChange,
-                    classification: .unrecognized,
-                    documentType: docType,
+                    item: change,
+                    classification: classification,
+                    documentType: documentType,
                     profile: letterProfile
                 )
                 packet.documents.append(PacketDocument(
                     packetId: packet.id,
-                    documentType: docType,
+                    documentType: documentType,
                     draftText: text
                 ))
             }
 
             recoveryPackets.append(packet)
 
-            // Seed tasks
-            let cal = Calendar.current
-            let now = Date()
-            let dueIn30 = cal.date(byAdding: .day, value: 30, to: now)
-
-            let task1 = TaskItem(
+            let recipient: RecipientType = index == 0 ? .bureau : (index.isMultiple(of: 2) ? .furnisher : .bureau)
+            let dueAt = calendar.date(byAdding: .day, value: 3 + (index * 4), to: now)
+            tasks.append(TaskItem(
                 packetId: packet.id,
-                title: "Review bureau dispute options",
-                recipientType: .bureau,
-                dueAt: cal.date(byAdding: .day, value: 7, to: now),
+                title: "Review (demoItemName(for: change)) draft",
+                recipientType: recipient,
+                dueAt: dueAt,
                 sentDate: nil,
                 status: .draft,
-                notes: "Sample task only. Nothing has been sent.",
-                ruleVersion: "FCRA § 611 (15 U.S.C. § 1681i)"
-            )
+                notes: "Synthetic demo case only. Nothing has been sent. Mosaic does not submit disputes for you.",
+                ruleVersion: index == 0 ? "FCRA § 611 (15 U.S.C. § 1681i)" : "Demo review guidance"
+            ))
+        }
 
-            let task2 = TaskItem(
-                packetId: packet.id,
-                title: "Furnisher Direct Dispute: Harbor Recovery",
-                recipientType: .furnisher,
-                dueAt: dueIn30,
-                sentDate: nil,
-                status: .draft,
-                notes: "Pending consumer signature on drafted letter",
-                ruleVersion: "12 CFR § 1022.43"
-            )
-
-            let task3 = TaskItem(
-                packetId: packet.id,
+        if let firstPacket = recoveryPackets.first {
+            tasks.append(TaskItem(
+                packetId: firstPacket.id,
                 title: "Review FTC IdentityTheft.gov options",
                 recipientType: .ftc,
-                dueAt: cal.date(byAdding: .day, value: 3, to: now),
+                dueAt: calendar.date(byAdding: .day, value: 3, to: now),
                 sentDate: nil,
                 status: .draft,
-                notes: "Sample task only. Mosaic does not file reports for you.",
+                notes: "Synthetic demo case only. Mosaic does not file reports for you.",
                 ruleVersion: "FTC Identity Theft Guidelines"
-            )
+            ))
 
-            let task4 = TaskItem(
-                packetId: packet.id,
-                title: "Confirm Equifax & TransUnion Security Freezes",
+            tasks.append(TaskItem(
+                packetId: firstPacket.id,
+                title: "Confirm bureau security freezes",
                 recipientType: .security,
-                dueAt: cal.date(byAdding: .day, value: 5, to: now),
+                dueAt: calendar.date(byAdding: .day, value: 5, to: now),
                 sentDate: nil,
                 status: .draft,
-                notes: "Review freeze status at bureaus",
+                notes: "Synthetic demo case only. Review freeze status yourself.",
                 ruleVersion: "Economic Growth, Regulatory Relief, and Consumer Protection Act"
-            )
+            ))
+        }
+    }
 
-            tasks = [task1, task2, task3, task4]
+    private func demoItemName(for change: ChangeItem) -> String {
+        switch change.changeType {
+        case .collectionOrChargeoffChange:
+            return "Harbor Recovery Collections"
+        case .jointOrAuthorizedUserChange:
+            return "First National Bank Card"
+        case .balanceIncrease:
+            return "First National Bank Card balance"
+        case .newInquiry:
+            return "Northstar Lending inquiry"
+        case .newAddress:
+            return "New address entry"
+        default:
+            return change.summary
         }
     }
 
@@ -333,6 +372,7 @@ public final class AppState: ObservableObject {
         priorSnapshot = nil
         currentSnapshot = nil
         changeItems.removeAll()
+        reportEmailCandidates.removeAll()
         recoveryPackets.removeAll()
         tasks.removeAll()
         savedItems.removeAll()
@@ -343,6 +383,7 @@ public final class AppState: ObservableObject {
         canUndoLastReview = false
         lastReviewedItemID = nil
         undoneReviewItemIDs.removeAll()
+        SecurityManager.shared.purgeEncryptedStore()
         SecurityManager.shared.purgeTemporaryFiles()
         BackboardService.shared.clearMemory()
         analytics = AnalyticsSummary(

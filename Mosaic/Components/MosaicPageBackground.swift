@@ -1,26 +1,21 @@
 import SwiftUI
 
-/// Native SwiftUI translation of the pink-salt treatment using Mosaic's palette.
+/// Shared warm off-white canvas for Mosaic pages.
 struct MosaicPaletteBackground: View {
     var opacity: Double = 0.3
 
     var body: some View {
         ZStack {
-            Color.white
+            Color.mosaicWarmBackground
 
-            LinearGradient(
-                colors: Color.mosaicHomeGradientColors.map { $0.opacity(opacity) },
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            MosaicGrainOverlay(opacity: opacity > 0.7 ? 0.018 : 0.010)
+            // Keep a barely visible native grain while removing the former gradient entirely.
+            MosaicGrainOverlay(opacity: opacity > 0.7 ? 0.012 : 0.006)
         }
         .ignoresSafeArea()
     }
 }
 
-/// A tiny deterministic grain pattern, equivalent to the reference's 1% overlay.
+/// A tiny deterministic two-tone grain pattern, equivalent to the reference's noise overlay.
 private struct MosaicGrainOverlay: View {
     let opacity: Double
 
@@ -37,13 +32,13 @@ private struct MosaicGrainOverlay: View {
 
                     let x = CGFloat(column) * step
                     let y = CGFloat(row) * step
-                    let radius: CGFloat = seed % 3 == 0 ? 0.8 : 0.45
+                    let radius: CGFloat = seed % 3 == 0 ? 1.35 : 0.7
                     let dot = CGRect(x: x, y: y, width: radius, height: radius)
-                    context.fill(Path(ellipseIn: dot), with: .color(.white.opacity(opacity)))
+                    let grainColor: Color = seed.isMultiple(of: 2) ? .white : .black
+                    context.fill(Path(ellipseIn: dot), with: .color(grainColor.opacity(opacity)))
                 }
             }
         }
-        .blendMode(.overlay)
         .allowsHitTesting(false)
     }
 }

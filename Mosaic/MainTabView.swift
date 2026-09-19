@@ -7,7 +7,7 @@ struct MainTabView: View {
         if CommandLine.arguments.contains("--tab=1") { return 1 }
         if CommandLine.arguments.contains("--tab=2") { return 2 }
         if CommandLine.arguments.contains("--tab=3") { return 3 }
-        if CommandLine.arguments.contains("--tab=4") { return 4 }
+        if CommandLine.arguments.contains("--tab=4") { return 3 }
         return 0
     }()
 
@@ -17,25 +17,21 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            OverviewView(selectedTab: $selectedTab)
+            OverviewView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(0)
 
-            ScanView()
-                .tabItem { Label("Review", systemImage: "rectangle.stack.fill") }
-                .tag(1)
-
             RecoveryView()
                 .tabItem { Label("Letters", systemImage: "envelope.fill") }
-                .tag(2)
+                .tag(1)
 
             LearnView()
                 .tabItem { Label("Learn", systemImage: "book.closed.fill") }
-                .tag(3)
+                .tag(2)
 
             SettingsView(onLogout: onLogout)
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
-                .tag(4)
+                .tag(3)
         }
         .tint(Color.mosaicViolet)
         .mosaicSystemTabBar()

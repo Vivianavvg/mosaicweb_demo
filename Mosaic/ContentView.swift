@@ -62,7 +62,6 @@ struct ContentView: View {
             } else {
                 WelcomeView(
                     onLogin: { login() },
-                    onDemo: { startDemo() },
                     isAuthenticating: isAuthenticating,
                     authErrorMessage: authErrorMessage
                 )
@@ -78,10 +77,23 @@ struct ContentView: View {
             }
         }
         .onAppear {
+#if DEBUG
             if CommandLine.arguments.contains("--demo") {
-                startDemo()
+                appState.startDemoMode()
+                isLoading = false
                 return
             }
+            if let importArgument = CommandLine.arguments.first(where: { $0.hasPrefix("--import-file=") }) {
+                let prefix = "--import-file="
+                let path = String(importArgument.dropFirst(prefix.count))
+                appState.isAuthenticated = true
+                isLoading = false
+                Task { @MainActor in
+                    _ = try? await appState.importCreditReport(from: URL(fileURLWithPath: path))
+                }
+                return
+            }
+#endif
             guard credentialsManager.canRenew() else {
                 isLoading = false
                 return
@@ -137,11 +149,6 @@ struct ContentView: View {
                 print("Auth0 Login failed: \(error)")
             }
         }
-    }
-
-    private func startDemo() {
-        appState.startDemoMode()
-        isLoading = false
     }
 
     private func logout() {
