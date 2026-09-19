@@ -6,13 +6,6 @@ struct OverviewView: View {
     @State private var assistantSummary = "Your latest report is ready for a calm, item-by-item review."
     @State private var isLoadingSummary = false
 
-    private var initials: String {
-        let name = appState.userName ?? "Mosaic"
-        let parts = name.split(separator: " ")
-        let letters = parts.prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "M" : String(letters)
-    }
-
     private var displayName: String {
         appState.userName?.split(separator: " ").first.map(String.init) ?? "there"
     }
@@ -23,9 +16,6 @@ struct OverviewView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
-                    MosaicTopBar(profileTitle: "PERSONAL", initials: initials)
-                        .id("overview_top")
-
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Good morning")
                             .font(MosaicFont.regular(17))
@@ -35,6 +25,7 @@ struct OverviewView: View {
                             .foregroundColor(Color.mosaicInk)
                     }
                     .padding(.horizontal, 24)
+                    .padding(.top, 12)
 
                     LiquidGlassCard(tint: Color.mosaicMint, cornerRadius: 28, contentPadding: 20) {
                         VStack(alignment: .leading, spacing: 16) {
@@ -109,7 +100,7 @@ struct OverviewView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .liquidGlass(cornerRadius: 24, shadowRadius: 8)
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 128)
+                    .padding(.bottom, 24)
                 }
             }
         }

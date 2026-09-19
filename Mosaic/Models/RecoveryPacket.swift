@@ -17,6 +17,26 @@ public enum PacketDocumentType: String, Codable, CaseIterable {
         }
     }
 
+    public var shortTitle: String {
+        switch self {
+        case .ftcPrep: return "FTC worksheet"
+        case .bureauDispute: return "Bureau letter"
+        case .furnisherDispute: return "Creditor notice"
+        case .evidenceChecklist: return "Evidence list"
+        case .freezeChecklist: return "Credit freeze guide"
+        }
+    }
+
+    public var shortDetail: String {
+        switch self {
+        case .ftcPrep: return "Optional notes before you use IdentityTheft.gov"
+        case .bureauDispute: return "Letter you can mail to a credit bureau"
+        case .furnisherDispute: return "Letter you can mail to the creditor"
+        case .evidenceChecklist: return "What to keep with a dispute mailing"
+        case .freezeChecklist: return "How to freeze your file at each bureau"
+        }
+    }
+
     public var defaultSourceUrl: String {
         switch self {
         case .ftcPrep: return "https://www.identitytheft.gov/"

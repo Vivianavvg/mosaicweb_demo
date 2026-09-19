@@ -50,6 +50,7 @@ struct DeadlineTrackerView: View {
             }
         }
         .background(Color.mosaicPage.ignoresSafeArea())
+        .hidesFloatingTabBar()
         .navigationTitle("Deadline & Status Tracker")
         .navigationBarTitleDisplayMode(.inline)
     }

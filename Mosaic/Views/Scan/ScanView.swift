@@ -7,13 +7,6 @@ struct ScanView: View {
     @State private var showPDFModal = false
     @State private var pdfURLForModal: URL? = nil
 
-    private var initials: String {
-        let name = appState.userName ?? "Mosaic"
-        let parts = name.split(separator: " ")
-        let letters = parts.prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "M" : String(letters)
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -21,8 +14,6 @@ struct ScanView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        MosaicTopBar(profileTitle: "PERSONAL", initials: initials)
-
                         MosaicSheet {
                             VStack(alignment: .leading, spacing: 22) {
                                 ZStack(alignment: .topTrailing) {
@@ -148,7 +139,7 @@ struct ScanView: View {
                                 .padding(.top, 4)
                             }
                         }
-                        .padding(.bottom, 128)
+                        .padding(.bottom, 24)
                     }
                 }
             }

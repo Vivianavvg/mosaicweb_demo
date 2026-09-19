@@ -14,7 +14,7 @@ Whenever you or another agent update this file with bug reports, UI adjustments,
 ---
 
 ## 📝 Pending Requests & Bug Reports
-<!-- Add tasks, bug descriptions, or UI fixes below. Mark them with `- [ ]` -->
+<!-- Add tasks below as unchecked markdown checkboxes -->
 
 
 ---

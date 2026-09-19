@@ -104,6 +104,7 @@ struct InteractiveChecklistView: View {
             .padding(16)
         }
         .background(Color.mosaicPage.ignoresSafeArea())
+        .hidesFloatingTabBar()
         .navigationTitle("Evidence & Freeze Checklist")
         .navigationBarTitleDisplayMode(.inline)
     }

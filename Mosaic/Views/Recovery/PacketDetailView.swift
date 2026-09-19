@@ -4,196 +4,98 @@ struct PacketDetailView: View {
     @Binding var packet: RecoveryPacket
     @EnvironmentObject private var appState: AppState
 
-    @State private var exportedPDFURL: URL? = nil
-    @State private var showShareSheet: Bool = false
-    @State private var showSourcePDF: Bool = false
-    @State private var sourcePDFURL: URL? = nil
+    @State private var exportedPDFURL: URL?
+    @State private var showShareSheet = false
+    @State private var showSourcePDF = false
+    @State private var sourcePDFURL: URL?
+    @State private var showMore = false
+
+    private var relatedAccount: ReportAccount? {
+        appState.currentSnapshot?.accounts.first { $0.accountLast4 == packet.itemLast4 }
+    }
+
+    private var primaryDocumentID: UUID? {
+        packet.documents.first { $0.documentType == .bureauDispute }?.id ?? packet.documents.first?.id
+    }
+
+    private var primaryBinding: Binding<PacketDocument>? {
+        guard let id = primaryDocumentID,
+              let index = packet.documents.firstIndex(where: { $0.id == id }) else { return nil }
+        return $packet.documents[index]
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                // Section 1: Selected Item & Classification Banner
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(packet.itemName)
-                                .font(.title3.bold())
-                                .foregroundColor(Color.mosaicInk)
-                            if let last4 = packet.itemLast4 {
-                                Text("Account Identifier: **** \(last4)")
-                                    .font(.caption)
-                                    .foregroundColor(Color.mosaicMuted)
-                            }
-                        }
-                        Spacer()
-                        Text(packet.status.displayName)
-                            .font(.caption2.bold())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.mosaicTeal.opacity(0.15))
-                            .foregroundColor(Color.mosaicTeal)
-                            .cornerRadius(6)
-                    }
-
-                    HStack(spacing: 8) {
-                        Image(systemName: "tag.fill")
-                            .font(.caption)
-                            .foregroundColor(Color.mosaicAmber)
-                        Text("Classification: \(packet.classificationAtCreation.title)")
-                            .font(.caption.bold())
-                            .foregroundColor(Color.mosaicAmber)
-                        Spacer()
-                        Text("Source: Page \(packet.sourcePage)")
-                            .font(.caption2.bold())
-                            .foregroundColor(Color.mosaicAccent)
-                    }
-                }
-                .padding(16)
-                .background(Color.mosaicCardBg)
-                .cornerRadius(14)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.mosaicCardBorder, lineWidth: 1))
-
-                // Section 2: Source Page Visual Reference & Inspection
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "doc.text.magnifyingglass")
-                            .foregroundColor(Color.mosaicAccent)
-                        Text("Referenced on credit report page \(packet.sourcePage). Include this page copy with your disputes.")
-                            .font(.caption)
-                            .foregroundColor(Color.mosaicMuted)
-                    }
-
-                    Button(action: {
-                        sourcePDFURL = SyntheticDataService.shared.generateSyntheticPDFFile(isCurrentReport: true)
-                        showSourcePDF = true
-                    }) {
-                        HStack {
-                            Image(systemName: "eye.fill")
-                            Text("Inspect Source Report Page \(packet.sourcePage)")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                        }
-                        .font(.caption.bold())
-                        .foregroundColor(Color.mosaicAccent)
-                        .padding(10)
-                        .background(Color.mosaicAccent.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                }
-                .padding(12)
-                .background(Color.mosaicFill)
-                .cornerRadius(10)
-
-                // Section 3: Interactive Evidence & Freeze Checklists
-                NavigationLink(destination: InteractiveChecklistView()) {
-                    HStack {
-                        Image(systemName: "checklist.checked")
-                            .font(.title3)
-                            .foregroundColor(Color.mosaicTeal)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Interactive Evidence & Freeze Checklist")
-                                .font(.headline)
-                                .foregroundColor(Color.mosaicInk)
-                            Text("Check off documents, track postal receipts & record bureau PINs")
-                                .font(.caption)
-                                .foregroundColor(Color.mosaicMuted)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(Color.mosaicMuted)
-                    }
-                    .padding(14)
-                    .background(Color.mosaicCardBg)
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mosaicCardBorder, lineWidth: 1))
-                }
-
-                // Section 4-7: Packet Documents / Drafts
-                Text("Draft Materials & Worksheets")
-                    .font(.headline)
-                    .foregroundColor(Color.mosaicInk)
-                    .padding(.top, 4)
-
-                ForEach($packet.documents) { $doc in
-                    NavigationLink(destination: DraftEditorView(document: $doc)) {
-                        DocumentRow(document: doc)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                // Section 8: Export Complete Packet (PDF)
-                Button(action: {
-                    if let pdfUrl = PDFPacketExporter.shared.exportPacketPDF(packet: packet) {
-                        exportedPDFURL = pdfUrl
-                        showShareSheet = true
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "arrow.down.doc.fill")
-                        Text("Export Multi-Page Recovery Packet (PDF)")
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.mosaicInk)
-                    .cornerRadius(12)
-                }
-                .padding(.top, 6)
-
-                // Section 9: Quick Deadline Tracker Link
-                NavigationLink(destination: DeadlineTrackerView()) {
-                    HStack {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.title3)
-                            .foregroundColor(Color.mosaicAmber)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Dispute Deadlines & Follow-ups")
-                                .font(.headline)
-                                .foregroundColor(Color.mosaicInk)
-                            Text("Track 30-day FCRA response windows & certified mail")
-                                .font(.caption)
-                                .foregroundColor(Color.mosaicMuted)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(Color.mosaicMuted)
-                    }
-                    .padding(14)
-                    .background(Color.mosaicCardBg)
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mosaicCardBorder, lineWidth: 1))
-                }
-
-                // Official Resources & Links
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Official Government Resources")
-                        .font(.headline)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .center, spacing: 16) {
+                    Text(relatedAccount?.formattedBalance ?? "Letter")
+                        .font(MosaicFont.medium(40))
                         .foregroundColor(Color.mosaicInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                        .frame(minWidth: 118, alignment: .leading)
 
-                    LinkCard(
-                        title: "FTC IdentityTheft.gov",
-                        subtitle: "File an official Identity Theft Report and affidavit",
-                        urlString: "https://www.identitytheft.gov/"
-                    )
-                    LinkCard(
-                        title: "CFPB Credit Dispute Guide",
-                        subtitle: "Consumer rights and model dispute instructions",
-                        urlString: "https://www.consumerfinance.gov/ask-cfpb/how-do-i-dispute-an-error-on-my-credit-report-en-314/"
-                    )
-                    LinkCard(
-                        title: "FTC Credit Freeze Guide",
-                        subtitle: "Instructions for placing free credit freezes",
-                        urlString: "https://consumer.ftc.gov/articles/credit-freezes-and-fraud-alerts"
-                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(packet.itemName)
+                            .font(MosaicFont.medium(18))
+                            .foregroundColor(Color.mosaicInk)
+                        Text(plainReason)
+                            .font(MosaicFont.regular(13))
+                            .foregroundColor(Color.mosaicSubtle)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
                 }
+                .padding(20)
+                .liquidGlass(tint: Color.mosaicMint, cornerRadius: 28, shadowRadius: 12)
+
+                Text("Mosaic wrote a letter you can edit. It will not be mailed unless you mail it.")
+                    .font(MosaicFont.regular(16))
+                    .foregroundColor(Color.mosaicInk)
+                    .lineSpacing(3)
+
+                if let primary = primaryBinding {
+                    NavigationLink {
+                        DraftEditorView(document: primary)
+                    } label: {
+                        Text("Open the letter")
+                            .font(MosaicFont.medium(16))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.liquidGlass(tint: Color.mosaicViolet, isProminent: true))
+                }
+
+                Button {
+                    sourcePDFURL = SyntheticDataService.shared.generateSyntheticPDFFile(isCurrentReport: true)
+                    showSourcePDF = true
+                } label: {
+                    Text("See it on my report")
+                        .font(MosaicFont.medium(15))
+                        .foregroundColor(Color.mosaicInk)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.liquidGlass(tint: Color.mosaicMint))
+
+                Button("More options") {
+                    showMore = true
+                }
+                .font(MosaicFont.regular(14))
+                .foregroundColor(Color.mosaicSubtle)
+                .frame(maxWidth: .infinity)
                 .padding(.top, 8)
             }
-            .padding(16)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 28)
         }
         .background(Color.mosaicPage.ignoresSafeArea())
-        .navigationTitle("Recovery Packet")
+        .hidesFloatingTabBar()
+        .navigationTitle("This letter")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showMore) {
+            moreSheet
+        }
         .sheet(isPresented: $showShareSheet) {
             if let url = exportedPDFURL {
                 ShareSheet(activityItems: [url])
@@ -201,78 +103,73 @@ struct PacketDetailView: View {
         }
         .sheet(isPresented: $showSourcePDF) {
             if let url = sourcePDFURL {
-                PDFViewerModal(url: url, title: "Source Report (Page \(packet.sourcePage))")
+                PDFViewerModal(url: url, title: "Your report")
             }
         }
         .onAppear {
             BackboardService.shared.recordLastViewedPacket(id: packet.id)
         }
     }
-}
 
-private struct DocumentRow: View {
-    let document: PacketDocument
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(document.title)
-                    .font(.subheadline.bold())
-                    .foregroundColor(Color.mosaicInk)
-                HStack(spacing: 8) {
-                    Text(document.generatedBy)
-                        .font(.caption2)
-                        .foregroundColor(Color.mosaicTeal)
-                    if document.reviewedByUserAt != nil {
-                        Text("• Reviewed")
-                            .font(.caption2.bold())
-                            .foregroundColor(Color.mosaicAccent)
-                    } else {
-                        Text("• Draft Needs Review")
-                            .font(.caption2)
-                            .foregroundColor(Color.mosaicAmber)
-                    }
-                }
-            }
-            Spacer()
-            Image(systemName: "pencil.and.list.clipboard")
-                .foregroundColor(Color.mosaicAccent)
+    private var plainReason: String {
+        switch packet.classificationAtCreation {
+        case .unrecognized:
+            return "You said you did not open this."
+        case .recognized:
+            return "You said you know this account."
+        case .pressuredOrNotFreelyAgreed:
+            return "You said you did not freely agree to this."
+        case .notSure:
+            return "You were not sure about this yet."
+        case .ignored:
+            return "You chose to leave this for now."
         }
-        .padding(14)
-        .background(Color.mosaicCardBg)
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mosaicCardBorder, lineWidth: 1))
     }
-}
 
-private struct LinkCard: View {
-    let title: String
-    let subtitle: String
-    let urlString: String
-
-    var body: some View {
-        if let url = URL(string: urlString) {
-            Link(destination: url) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(.subheadline.bold())
-                            .foregroundColor(Color.mosaicAccent)
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundColor(Color.mosaicMuted)
+    private var moreSheet: some View {
+        NavigationStack {
+            List {
+                Section("Other letters") {
+                    ForEach(packet.documents.indices, id: \.self) { index in
+                        if packet.documents[index].id != primaryDocumentID {
+                            NavigationLink(packet.documents[index].documentType.shortTitle) {
+                                DraftEditorView(document: $packet.documents[index])
+                            }
+                        }
                     }
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption.bold())
-                        .foregroundColor(Color.mosaicAccent)
                 }
-                .padding(12)
-                .background(Color.mosaicCardBg)
-                .cornerRadius(10)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mosaicCardBorder, lineWidth: 1))
+
+                Section("If you need help") {
+                    NavigationLink("Checklist of papers to keep") {
+                        InteractiveChecklistView()
+                    }
+                    NavigationLink("Dates to remember") {
+                        DeadlineTrackerView()
+                    }
+                    Button("Save a PDF copy") {
+                        if let pdfUrl = PDFPacketExporter.shared.exportPacketPDF(packet: packet) {
+                            exportedPDFURL = pdfUrl
+                            showMore = false
+                            showShareSheet = true
+                        }
+                    }
+                    if let ftc = URL(string: "https://www.identitytheft.gov/") {
+                        Link("Official FTC site", destination: ftc)
+                    }
+                    if let cfpb = URL(string: "https://www.consumerfinance.gov/ask-cfpb/how-do-i-dispute-an-error-on-my-credit-report-en-314/") {
+                        Link("How to dispute a credit item", destination: cfpb)
+                    }
+                }
+            }
+            .navigationTitle("More")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showMore = false }
+                }
             }
         }
+        .presentationDetents([.medium, .large])
     }
 }
 

@@ -3,128 +3,100 @@ import SwiftUI
 struct RecoveryView: View {
     @EnvironmentObject private var appState: AppState
 
-    private var initials: String {
-        let name = appState.userName ?? "Mosaic"
-        let parts = name.split(separator: " ")
-        let letters = parts.prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "M" : String(letters)
+    private var focusAccount: ReportAccount? {
+        if let last4 = appState.recoveryPackets.first?.itemLast4 {
+            return appState.currentSnapshot?.accounts.first { $0.accountLast4 == last4 }
+        }
+        return appState.currentSnapshot?.accounts.first {
+            $0.accountType.localizedCaseInsensitiveContains("collection")
+        }
     }
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                LiquidGlassBackground()
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        MosaicTopBar(profileTitle: "PERSONAL", initials: initials)
-
-                        VStack(spacing: 10) {
-                            Text("DISPUTED BALANCE")
-                                .font(MosaicFont.medium(11))
-                                .tracking(1.2)
-                                .foregroundColor(.white.opacity(0.8))
-                            Text("$9,940.00")
-                                .font(MosaicFont.medium(44))
-                                .foregroundColor(.white)
-                                .shadow(color: Color.black.opacity(0.12), radius: 10, y: 4)
-                        }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("These are letters you can mail. Mosaic will not send them for you.")
+                        .font(MosaicFont.regular(16))
+                        .foregroundColor(Color.mosaicSubtle)
+                        .lineSpacing(3)
                         .padding(.top, 8)
 
-                        HStack(spacing: 12) {
-                            NavigationLink(destination: DeadlineTrackerView()) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.up.right")
-                                    Text("TRACK")
-                                        .font(MosaicFont.medium(13))
-                                        .tracking(0.6)
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 22)
-                                .padding(.vertical, 14)
-                                .background(Color.mosaicInk)
-                                .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-
-                            NavigationLink(destination: InteractiveChecklistView()) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.down")
-                                    Text("PREPARE")
-                                        .font(MosaicFont.medium(13))
-                                        .tracking(0.6)
-                                }
-                                .foregroundColor(Color.mosaicInk)
-                                .padding(.horizontal, 22)
-                                .padding(.vertical, 14)
-                                .liquidGlass(cornerRadius: 100, shadowRadius: 8)
+                    if appState.recoveryPackets.isEmpty {
+                        Text("Nothing here yet. Go to Scan, open an item you do not recognize, and come back.")
+                            .font(MosaicFont.regular(16))
+                            .foregroundColor(Color.mosaicInk)
+                    } else {
+                        ForEach(appState.recoveryPackets.indices, id: \.self) { index in
+                            NavigationLink {
+                                PacketDetailView(packet: $appState.recoveryPackets[index])
+                            } label: {
+                                letterCard(
+                                    appState.recoveryPackets[index],
+                                    account: account(for: appState.recoveryPackets[index])
+                                )
                             }
                             .buttonStyle(.plain)
                         }
-
-                        HStack(spacing: 10) {
-                            miniCard(title: "LETTERS", value: "\(appState.recoveryPackets.count)", bars: [4, 7, 6, 9, 8])
-                            miniCard(title: "OPEN TASKS", value: "\(appState.tasks.filter { !$0.isCompleted }.count)", bars: [3, 5, 8, 6, 10])
-                            miniCard(title: "DONE", value: "\(appState.tasks.filter { $0.isCompleted }.count)", bars: [2, 3, 4, 6, 5])
-                        }
-                        .padding(.horizontal, 20)
-
-                        MosaicSheet {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Text("Packets")
-                                        .font(MosaicFont.medium(24))
-                                        .foregroundColor(Color.mosaicInk)
-                                    Spacer()
-                                    Text("\(appState.recoveryPackets.count) READY")
-                                        .font(MosaicFont.medium(11))
-                                        .tracking(0.7)
-                                        .foregroundColor(Color.mosaicMuted)
-                                }
-
-                                if appState.recoveryPackets.isEmpty {
-                                    Text("Classify an unauthorized item in Scan to generate dispute letters.")
-                                        .font(MosaicFont.regular(14))
-                                        .foregroundColor(Color.mosaicMuted)
-                                } else {
-                                    ForEach($appState.recoveryPackets) { $packet in
-                                        NavigationLink(destination: PacketDetailView(packet: $packet)) {
-                                            MosaicTransactionRow(
-                                                icon: "envelope",
-                                                iconColor: Color.mosaicInk,
-                                                title: packet.itemName,
-                                                subtitle: packet.status.displayName,
-                                                amount: packet.itemLast4.map { "**** \($0)" } ?? "",
-                                                time: "Review"
-                                            )
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.bottom, 128)
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
             }
-            .navigationBarHidden(true)
+            .background(Color.mosaicPage.ignoresSafeArea())
+            .navigationTitle("Your letters")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 
-    private func miniCard(title: String, value: String, bars: [CGFloat]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(MosaicFont.medium(10))
-                .tracking(0.7)
-                .foregroundColor(Color.mosaicMuted)
-            MosaicBarChart(values: bars, highlightIndex: bars.count - 1)
-                .frame(height: 36)
-            Text(value)
-                .font(MosaicFont.medium(22))
-                .foregroundColor(Color.mosaicInk)
+    private func account(for packet: RecoveryPacket) -> ReportAccount? {
+        if let last4 = packet.itemLast4 {
+            return appState.currentSnapshot?.accounts.first { $0.accountLast4 == last4 }
         }
-        .padding(14)
+        return focusAccount
+    }
+
+    private func letterCard(_ packet: RecoveryPacket, account: ReportAccount?) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            Text(account?.formattedBalance ?? "Letter")
+                .font(MosaicFont.medium(40))
+                .foregroundColor(Color.mosaicInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .frame(minWidth: 118, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(packet.itemName)
+                    .font(MosaicFont.medium(17))
+                    .foregroundColor(Color.mosaicInk)
+                Text(plainReason(for: packet))
+                    .font(MosaicFont.regular(13))
+                    .foregroundColor(Color.mosaicSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Tap to open the letter")
+                    .font(MosaicFont.medium(12))
+                    .foregroundColor(Color.mosaicViolet)
+                    .padding(.top, 2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .liquidGlass(cornerRadius: 22, shadowRadius: 10)
+        .liquidGlass(tint: Color.mosaicMint, cornerRadius: 28, shadowRadius: 12)
+    }
+
+    private func plainReason(for packet: RecoveryPacket) -> String {
+        switch packet.classificationAtCreation {
+        case .unrecognized:
+            return "This showed up on your credit report. You said you did not open it."
+        case .recognized:
+            return "This showed up on your credit report. You said you know this account."
+        case .pressuredOrNotFreelyAgreed:
+            return "This showed up on your credit report. You said you did not freely agree to it."
+        case .notSure:
+            return "This showed up on your credit report. You were not sure about it yet."
+        case .ignored:
+            return "This showed up on your credit report. You chose to leave it for now."
+        }
     }
 }

@@ -15,7 +15,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A0000000000000000000X001 /* Exceptions for "Mosaic" folder in "Mosaic" target */ = {
+		A0000000000000000000X001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -25,7 +25,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A0000000000000000000F001 /* Mosaic */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A0000000000000000000X001 /* Exceptions for "Mosaic" folder in "Mosaic" target */, ); explicitFileTypes = {}; explicitFolders = (); path = Mosaic; sourceTree = "<group>"; };
+		A0000000000000000000F001 /* Mosaic */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A0000000000000000000X001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Mosaic; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */

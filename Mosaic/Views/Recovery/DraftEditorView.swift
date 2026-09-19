@@ -99,7 +99,8 @@ struct DraftEditorView: View {
             .background(Color.mosaicDarkBg)
         }
         .background(Color.mosaicPage.ignoresSafeArea())
-        .navigationTitle(document.title)
+        .hidesFloatingTabBar()
+        .navigationTitle(document.documentType.shortTitle)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(activityItems: [document.draftText])

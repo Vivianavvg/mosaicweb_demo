@@ -18,59 +18,42 @@ struct MainTabView: View {
         self.user = user
         self.onLogout = onLogout
         self.webAuth = webAuth
-        UITabBar.appearance().isHidden = true
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                OverviewView(selectedTab: $selectedTab)
-                    .tag(0)
-                ScanView()
-                    .tag(1)
-                RecoveryView()
-                    .tag(2)
-                LearnView()
-                    .tag(3)
-                SettingsView(onLogout: onLogout)
-                    .tag(4)
-            }
+        TabView(selection: $selectedTab) {
+            OverviewView(selectedTab: $selectedTab)
+                .tabItem { Label("Home", systemImage: "house.fill") }
+                .tag(0)
 
-            HStack(spacing: 0) {
-                tabButton(icon: "house.fill", outline: "house", index: 0)
-                tabButton(icon: "chart.bar.fill", outline: "chart.bar", index: 1)
-                tabButton(icon: "arrow.left.arrow.right", outline: "arrow.left.arrow.right", index: 2)
-                tabButton(icon: "book.fill", outline: "book", index: 3)
-                tabButton(icon: "gearshape.fill", outline: "gearshape", index: 4)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 10)
-            .liquidGlass(cornerRadius: 32, shadowRadius: 20)
-            .padding(.horizontal, 28)
-            .padding(.bottom, 10)
+            ScanView()
+                .tabItem { Label("Scan", systemImage: "doc.text.magnifyingglass") }
+                .tag(1)
+
+            RecoveryView()
+                .tabItem { Label("Letters", systemImage: "envelope.fill") }
+                .tag(2)
+
+            LearnView()
+                .tabItem { Label("Learn", systemImage: "book.fill") }
+                .tag(3)
+
+            SettingsView(onLogout: onLogout)
+                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tag(4)
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .tint(Color.mosaicViolet)
+        .mosaicSystemTabBar()
     }
+}
 
-    private func tabButton(icon: String, outline: String, index: Int) -> some View {
-        Button {
-            withAnimation(.easeOut(duration: 0.18)) {
-                selectedTab = index
-            }
-        } label: {
-            VStack(spacing: 5) {
-                Image(systemName: selectedTab == index ? icon : outline)
-                    .font(.system(size: 18, weight: selectedTab == index ? .semibold : .regular))
-                    .foregroundColor(selectedTab == index ? Color.mosaicInk : Color.mosaicMuted)
-                Circle()
-                    .fill(selectedTab == index ? Color.mosaicInk : Color.clear)
-                    .frame(width: 4, height: 4)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
+private extension View {
+    @ViewBuilder
+    func mosaicSystemTabBar() -> some View {
+        if #available(iOS 26.0, *) {
+            self.tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            self
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(["Overview", "Scan", "Recovery", "Learn", "Settings"][index])
     }
 }

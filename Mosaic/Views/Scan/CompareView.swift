@@ -105,6 +105,7 @@ struct CompareView: View {
             }
         }
         .background(Color.mosaicPage.ignoresSafeArea())
+        .hidesFloatingTabBar()
         .navigationTitle("Change Inbox")
         .navigationBarTitleDisplayMode(.inline)
     }

@@ -3,13 +3,6 @@ import SwiftUI
 struct LearnView: View {
     @EnvironmentObject private var appState: AppState
 
-    private var initials: String {
-        let name = appState.userName ?? "Mosaic"
-        let parts = name.split(separator: " ")
-        let letters = parts.prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "M" : String(letters)
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -17,8 +10,6 @@ struct LearnView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        MosaicTopBar(profileTitle: "PERSONAL", initials: initials)
-
                         MosaicSheet {
                             VStack(alignment: .leading, spacing: 18) {
                                 Text("Learn")
@@ -99,7 +90,7 @@ struct LearnView: View {
                                 )
                             }
                         }
-                        .padding(.bottom, 128)
+                        .padding(.bottom, 24)
                     }
                 }
             }

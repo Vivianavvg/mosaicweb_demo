@@ -22,8 +22,6 @@ struct SettingsView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        MosaicTopBar(profileTitle: "PERSONAL", initials: initials)
-
                         MosaicSheet {
                             VStack(alignment: .leading, spacing: 20) {
                                 Text("Settings")
@@ -162,7 +160,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .padding(.bottom, 128)
+                        .padding(.bottom, 24)
                     }
                 }
             }
