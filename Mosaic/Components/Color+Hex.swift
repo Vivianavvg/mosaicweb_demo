@@ -53,4 +53,19 @@ extension Color {
     public static let mosaicRose = Color(hex: "2E1760")
     public static let mosaicMuted = Color(hex: "7180B9")
     public static let mosaicTextPrimary = Color(hex: "171738")
+
+    // MARK: - Home background palette
+
+    public static let mosaicBlush = Color(hex: "FFD6FF")
+    public static let mosaicLavender = Color(hex: "E7C6FF")
+    public static let mosaicLilac = Color(hex: "C8B6FF")
+    public static let mosaicPeriwinkle = Color(hex: "B8C0FF")
+    public static let mosaicSky = Color(hex: "BBD0FF")
+    public static let mosaicHomeGradientColors: [Color] = [
+        mosaicBlush,
+        mosaicLavender,
+        mosaicLilac,
+        mosaicPeriwinkle,
+        mosaicSky
+    ]
 }

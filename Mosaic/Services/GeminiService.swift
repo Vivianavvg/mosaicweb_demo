@@ -32,44 +32,174 @@ public final class GeminiService {
         return "You have \(changeItems.count) change\(changeItems.count == 1 ? "" : "s") to review and \(openTaskCount) next step\(openTaskCount == 1 ? "" : "s") waiting for you."
     }
 
-    /// Generates structured dispute and recovery drafts using Gemini 3.6 Flash (or deterministic fallback)
+    /// Gives each review card one short, neutral next step using only redacted report facts.
+    public func generateRecommendedNextStep(for item: ChangeItem) async -> String {
+        let safeSummary = RedactionEngine.shared.redactText(item.summary)
+        let safeDelta = RedactionEngine.shared.redactText(item.deltaSummary ?? "No additional change detail")
+        let prompt = """
+        Write one practical next step for a consumer reviewing a credit-report change.
+        Use plain language, 18 words or fewer, and begin with a verb.
+        Do not claim fraud, identity theft, coercion, legal outcomes, or guaranteed deletion.
+        Do not invent facts. The user must review the source page and decide what is accurate.
+        Change type: \(item.changeType.displayName)
+        Summary: \(safeSummary)
+        Change detail: \(safeDelta)
+        Source page: \(item.sourcePages.map(String.init).joined(separator: ", "))
+        """
+
+        if let aiText = try? await callGemini(prompt: prompt), !aiText.isEmpty {
+            return aiText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        switch item.changeType {
+        case .newInquiry:
+            return "Check whether you recognize this inquiry and keep the source page for your records."
+        case .collectionOrChargeoffChange:
+            return "Review the source page and gather records before deciding whether to create a draft."
+        case .balanceIncrease, .balanceDecrease:
+            return "Compare this balance with your statements and note any difference you cannot explain."
+        case .newAddress:
+            return "Confirm this address belongs on your file and keep supporting records if it does not."
+        default:
+            return "Review the source page and compare this entry with your own records before taking action."
+        }
+    }
+
+    /// Answers a focused Home-screen question using redacted report context.
+    public func generateAgentTurn(
+        userMessage: String,
+        changeItems: [ChangeItem],
+        openTaskCount: Int
+    ) async -> AgentTurn {
+        let safeMessage = RedactionEngine.shared.redactText(userMessage)
+        let categories = changeItems.prefix(6).map { $0.changeType.displayName }.joined(separator: ", ")
+        let prompt = """
+        You are Mosaic Coach, a calm financial-health assistant for a privacy-first iPhone app.
+        Answer the user's question in 2-4 short sentences using only this redacted context:
+        - Report changes: \(changeItems.count)
+        - Open follow-up tasks: \(openTaskCount)
+        - Change categories: \(categories.isEmpty ? "none yet" : categories)
+        User message: \(safeMessage)
+
+        Rules:
+        - Be practical and nonjudgmental.
+        - Never claim fraud, abuse, identity theft, or legal outcomes.
+        - Do not invent balances, scores, income, or account details.
+        - Explain that Mosaic prepares drafts and actions for user review; it does not submit disputes.
+        - If the user asks what to do next, prioritize reviewing the highest-severity report change and its source page.
+        """
+
+        if let aiText = try? await callGemini(prompt: prompt), !aiText.isEmpty {
+            return AgentTurn(
+                summary: "Mosaic Coach",
+                reply: aiText.trimmingCharacters(in: .whitespacesAndNewlines),
+                suggestions: suggestions(for: safeMessage)
+            )
+        }
+
+        return deterministicAgentTurn(for: safeMessage, changeCount: changeItems.count, openTaskCount: openTaskCount)
+    }
+
+    private func suggestions(for message: String) -> [AgentSuggestion] {
+        let lowercased = message.lowercased()
+        if lowercased.contains("learn") || lowercased.contains("explain") {
+            return [
+                AgentSuggestion(label: "Open Learn", action: "open_learn"),
+                AgentSuggestion(label: "Review changes", action: "review_changes")
+            ]
+        }
+        if lowercased.contains("letter") || lowercased.contains("dispute") || lowercased.contains("draft") {
+            return [
+                AgentSuggestion(label: "Open Letters", action: "open_recovery"),
+                AgentSuggestion(label: "Review changes", action: "review_changes")
+            ]
+        }
+        return [
+            AgentSuggestion(label: "Review changes", action: "review_changes"),
+            AgentSuggestion(label: "What next?", action: "ask", prompt: "What should I do next?"),
+            AgentSuggestion(label: "Explain my options", action: "open_learn")
+        ]
+    }
+
+    private func deterministicAgentTurn(for message: String, changeCount: Int, openTaskCount: Int) -> AgentTurn {
+        let lowercased = message.lowercased()
+        let reply: String
+
+        if lowercased.contains("next") || lowercased.contains("do") {
+            reply = "Start with the highest-priority report change, then review the source page before creating any draft. You have \(changeCount) change\(changeCount == 1 ? "" : "s") and \(openTaskCount) open follow-up task\(openTaskCount == 1 ? "" : "s") in Mosaic."
+        } else if lowercased.contains("learn") || lowercased.contains("explain") {
+            reply = "Mosaic can explain the report language and the available review steps in plain language. Open Learn for sourced guidance, then return here when you are ready to act."
+        } else if lowercased.contains("letter") || lowercased.contains("dispute") {
+            reply = "I can take you to Letters where Mosaic prepares a draft for your review. Confirm every fact and keep proof of anything you send."
+        } else {
+            reply = "I can help you understand what changed, choose a next step, or explain the recovery options. Start by reviewing the report changes so the advice stays tied to evidence."
+        }
+
+        return AgentTurn(
+            summary: "Mosaic Coach",
+            reply: reply,
+            suggestions: suggestions(for: message)
+        )
+    }
+
     public func generateDraft(
         item: ChangeItem,
         classification: UserClassification,
-        documentType: PacketDocumentType
+        documentType: PacketDocumentType,
+        profile: LetterUserProfile = LetterUserProfile()
     ) async -> String {
         let prompt = """
-        You are an assistant creating neutral, user-controlled credit report dispute and preparation drafts.
-        The user has reviewed their credit report and marked the following item:
+        Create a short email-style credit report draft.
+        Format EXACTLY:
+        TOPIC: <one short subject line>
+        ISSUE: <one short sentence>
+        Then the letter body.
+
+        Facts:
         - Item: \(item.summary)
-        - Issuer/Creditor: \(item.issuerName ?? "Unknown")
+        - Issuer: \(item.issuerName ?? "Unknown")
         - Masked Account: \(item.relatedAccountLast4 ?? "Unknown")
         - Report Page: \(item.sourcePages.map(String.init).joined(separator: ", "))
-        - User's Selected Classification: "\(classification.title)"
+        - Classification: \(classification.title)
         - Change context: \(item.deltaSummary ?? "")
+        - Sender: \(profile.fullName), \(profile.mailingAddress.replacingOccurrences(of: "\n", with: ", ")), \(profile.phone), \(profile.email)
+        - Document: \(documentType.title)
 
-        Document Type to generate: \(documentType.title)
-
-        MANDATORY RULES:
-        1. NEVER claim or assert that abuse, fraud, identity theft, or coerced debt occurred.
-        2. Never state legal conclusions or promise that items will be deleted.
-        3. Never recommend taking out a loan or credit card.
-        4. Use neutral, factual, user-controlled language.
-        5. Use bracketed prompts for any facts the user must fill in, e.g. [insert your full legal name], [insert date], [describe your records or what you recall regarding this account].
-        6. Always include the standard disclaimer: "NOTICE: This draft was generated for consumer review only. Mosaic is not a law firm or credit repair organization. Confirm all facts before submitting."
-        7. Provide specific guidance on attaching supporting documentation and keeping proof of mailing.
+        Rules: never claim fraud/abuse/coercion; never promise deletion; fill From with sender info; end with NOTICE: Draft for review. Mosaic is not a lawyer or credit-repair company. Confirm the facts before sending.
         """
 
         do {
             if let aiText = try await callGemini(prompt: prompt) {
-                return aiText
+                return fillUserInfo(in: aiText, profile: profile)
             }
         } catch {
             print("Gemini call failed or offline: \(error.localizedDescription). Using deterministic draft template.")
         }
 
-        // Deterministic template fallback conforming strictly to spec
-        return generateDeterministicDraft(item: item, classification: classification, documentType: documentType)
+        return generateDeterministicDraft(
+            item: item,
+            classification: classification,
+            documentType: documentType,
+            profile: profile
+        )
+    }
+
+    public func fillUserInfo(in text: String, profile: LetterUserProfile) -> String {
+        var result = text
+        let replacements: [(String, String)] = [
+            ("[Your Full Legal Name]", profile.fullName),
+            ("[insert your full legal name]", profile.fullName),
+            ("[Your Printed Name]", profile.fullName),
+            ("[Your Signature]", profile.fullName),
+            ("[Your Mailing Address]", profile.mailingAddress),
+            ("[Your Phone Number]", profile.phone),
+            ("[Your Email]", profile.email),
+            ("[insert date]", DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .none))
+        ]
+        for (needle, value) in replacements {
+            result = result.replacingOccurrences(of: needle, with: value)
+        }
+        return result
     }
 
     private func callGemini(prompt: String) async throws -> String? {
@@ -82,6 +212,7 @@ public final class GeminiService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 5
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let payload: [String: Any] = [
@@ -118,181 +249,160 @@ public final class GeminiService {
         return nil
     }
 
-    /// Deterministic draft generator following official CFPB / FTC guidelines
     public func generateDeterministicDraft(
         item: ChangeItem,
         classification: UserClassification,
-        documentType: PacketDocumentType
+        documentType: PacketDocumentType,
+        profile: LetterUserProfile = LetterUserProfile()
     ) -> String {
         let today = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .none)
         let issuer = item.issuerName ?? "Credit Reporting Entity"
         let last4 = item.relatedAccountLast4.map { "**** \($0)" } ?? "**** [Last 4]"
         let pages = item.sourcePages.map(String.init).joined(separator: ", ")
+        let topic = "Dispute of \(issuer) account \(last4)"
+        let issue: String = {
+            switch classification {
+            case .unrecognized:
+                return "I do not recognize this account on my credit report."
+            case .someoneElseOpened:
+                return "Someone else may have opened or used this account."
+            case .jointOrShared:
+                return "This may be a joint or shared account, so I am checking how it is reported."
+            case .authorizedUser:
+                return "I may be listed as an authorized user, so I am checking how it is reported."
+            case .pressuredOrNotFreelyAgreed:
+                return "I did not freely agree to this account appearing on my credit report."
+            case .recognized:
+                return "I recognize this account and am keeping a record of it."
+            case .notSure:
+                return "I need more time to verify this account against my records."
+            case .ignored:
+                return "I am not taking action on this item right now."
+            }
+        }()
 
         switch documentType {
         case .bureauDispute:
             return """
-            [Date: \(today)]
+            TOPIC: \(topic)
+            ISSUE: \(issue)
+
+            \(today)
 
             To:
-            [Credit Bureau Name: Equifax / Experian / TransUnion]
-            [Credit Bureau Dispute Department Address]
+            Credit Bureau Dispute Department
+            Equifax / Experian / TransUnion
 
             From:
-            [Your Full Legal Name]
-            [Your Mailing Address]
-            [Your Phone Number]
-            [Your Social Security Number / ID Reference - Provide separately per bureau secure protocol]
+            \(profile.fullName)
+            \(profile.mailingAddress)
+            \(profile.phone)
+            \(profile.email)
 
-            SUBJECT: Notice of Disputed Item on Credit Report — Request for Investigation under FCRA § 611 (15 U.S.C. § 1681i)
+            SUBJECT: \(topic)
 
             Dear Dispute Department,
 
-            I am writing to formally dispute inaccurate or unfamiliar information appearing on my credit report. I recently reviewed my credit file (reference page(s) \(pages)) and identified an item that requires your immediate investigation.
+            I am writing to dispute information on my credit report (page \(pages)).
 
-            DISPUTED ITEM DETAILS:
-            - Creditor / Furnisher Name: \(issuer)
-            - Reported Account Number: \(last4)
-            - Reported Balance / Status: \(item.deltaSummary ?? "Needs Review")
-            - My Review Classification: \(classification.title)
+            DISPUTED ITEM
+            - Creditor: \(issuer)
+            - Account: \(last4)
+            - Reported standing: \(item.deltaSummary ?? "Needs review")
+            - My note: \(classification.title)
 
-            REASON FOR DISPUTE:
-            [describe what you recognize or do not recognize regarding this item. For example: "I do not recognize having opened or authorized this account," or "I believe this account was added or modified without my free consent and authorization," or "The balance/status reported is inconsistent with my records."]
+            Please investigate this item under the Fair Credit Reporting Act, verify the records with the furnisher, and update any information that cannot be verified. Send me an updated report when you finish.
 
-            REQUESTED ACTION:
-            In accordance with the Fair Credit Reporting Act (FCRA), please conduct a thorough reinvestigation of this disputed item with the furnisher, verify all source documentation, and delete or correct any inaccurate or unverified entries from my file within 30 days. Please send me an updated copy of my report upon completion.
-
-            ATTACHMENTS ENCLOSED:
-            [ ] Copy of government-issued photo ID (Driver's License / State ID)
-            [ ] Proof of address (utility bill or bank statement)
-            [ ] Copy of credit report page \(pages) highlighting the disputed item
-            [ ] Any relevant personal records or affidavits
+            Attachments I will include:
+            - Photo ID
+            - Proof of address
+            - Copy of report page \(pages)
 
             Sincerely,
+            \(profile.fullName)
 
-            ____________________________________
-            [Your Signature]
-            [Your Printed Name]
-
-            --------------------------------------------------------------------------------
-            NOTICE: Draft for review. Mosaic is not a lawyer or credit-repair company. Confirm the facts and current instructions before sending.
-            Official Guidance: https://www.consumerfinance.gov/ask-cfpb/how-do-i-dispute-an-error-on-my-credit-report-en-314/
+            NOTICE: Draft for review. Mosaic is not a lawyer or credit-repair company. Confirm the facts before sending.
             """
 
         case .furnisherDispute:
             return """
-            [Date: \(today)]
+            TOPIC: Direct dispute — \(issuer) \(last4)
+            ISSUE: \(issue)
+
+            \(today)
 
             To:
             \(issuer)
-            Attn: Direct Dispute Department / Customer Relations
-            [Creditor Mailing Address]
+            Attn: Direct Dispute Department
 
             From:
-            [Your Full Legal Name]
-            [Your Mailing Address]
-            [Your Phone Number]
+            \(profile.fullName)
+            \(profile.mailingAddress)
+            \(profile.phone)
+            \(profile.email)
 
-            SUBJECT: Notice of Direct Dispute under 12 CFR § 1022.43 (FCRA § 623)
-            Account Identifier: \(last4)
+            SUBJECT: Direct dispute for account \(last4)
 
             Dear Dispute Coordinator,
 
-            I am writing to submit a direct dispute regarding information your organization has reported to consumer reporting agencies.
+            I dispute the information your organization has reported about account \(last4). Reported standing: \(item.deltaSummary ?? "Under review").
 
-            ITEM IN DISPUTE:
-            - Account Identifier: \(last4)
-            - Reported Standing / Balance: \(item.deltaSummary ?? "Under review")
-            - Consumer Status Selection: \(classification.title)
-
-            EXPLANATION OF DISPUTE:
-            [State the factual basis for disputing this item with the furnisher. For example: "I dispute liability for this balance. I did not enter into an agreement for this account, or my authorization was not freely given," or "I request verification of the original signed contract and all associated billing statements."]
-
-            REQUEST:
-            Please conduct an investigation of this direct dispute, review all relevant information, and report the results to me within 30 days. If the account information cannot be verified or is inaccurate, please promptly notify each credit reporting agency to update or delete the entry.
+            Please investigate, verify the records, and notify each credit bureau to update any information that cannot be verified. Reply to me within 30 days.
 
             Sincerely,
+            \(profile.fullName)
 
-            ____________________________________
-            [Your Printed Name]
-
-            --------------------------------------------------------------------------------
-            NOTICE: Draft for review. Mosaic is not a lawyer or credit-repair company. Confirm the facts and current instructions before sending.
+            NOTICE: Draft for review. Mosaic is not a lawyer or credit-repair company. Confirm the facts before sending.
             """
 
         case .ftcPrep:
             return """
-            FTC IDENTITYTHEFT.GOV WORKSHEET & INCIDENT PREPARATION
-            Date Prepared: \(today)
-            Source Reference: Credit Report Page(s) \(pages)
+            TOPIC: FTC worksheet for \(issuer)
+            ISSUE: \(issue)
 
-            1. DISPUTED ACCOUNT FACTS:
-            - Company / Creditor: \(issuer)
-            - Account Number: \(last4)
-            - Balance / Exposure: \(item.deltaSummary ?? "Unknown")
-            - User Classification: \(classification.title)
+            Prepared for: \(profile.fullName)
+            Date: \(today)
+            Account: \(last4) · Report page \(pages)
 
-            2. TIMELINE & RECOLLECTION WORKSHEET:
-            - Approximate date you first noticed this entry: [Insert Date]
-            - Do you recall applying for or signing for this account? [Yes / No / Unsure]
-            - Were you pressured, misled, or denied access to account communications? [Provide details in your own words]
-            - Have you contacted this creditor previously? [Details and dates, if any]
+            1. Company: \(issuer)
+            2. What changed: \(item.deltaSummary ?? "Needs review")
+            3. My classification: \(classification.title)
+            4. Next official step: visit https://www.identitytheft.gov/ if you choose to file a report there yourself.
 
-            3. RECOMMENDED OFFICIAL NEXT STEPS:
-            - Visit the official Federal Trade Commission portal: https://www.identitytheft.gov/
-            - Complete the step-by-step reporting wizard to generate an official FTC Identity Theft Report.
-            - Retain your FTC report reference number securely.
-
-            --------------------------------------------------------------------------------
-            NOTICE: This worksheet is for personal organization only. Mosaic does not submit reports to the FTC or law enforcement on your behalf.
+            NOTICE: This worksheet stays on your phone. Mosaic does not file reports for you.
             """
 
         case .evidenceChecklist:
             return """
-            EVIDENCE & DOCUMENTATION CHECKLIST
-            Disputed Item: \(issuer) (\(last4))
+            TOPIC: Evidence checklist — \(issuer)
+            ISSUE: Keep proof with any letter you mail.
 
-            Gather and retain copies of the following documents in your records:
-            [ ] Unaltered copy of your credit report showing the item on page \(pages).
-            [ ] Copy of your valid state identification or passport.
-            [ ] Current proof of residence (lease, electric/water bill, bank statement).
-            [ ] Certified Mail tracking numbers and signed return receipts (Green Cards).
-            [ ] Written correspondence log noting date, representative name, and summary of any phone calls.
-            [ ] Any letters, billing statements, or collection notices received from \(issuer).
-            [ ] FTC Identity Theft Report / Affidavit (if applicable from identitytheft.gov).
-            [ ] Notes documenting your timeline and recollection of events.
+            Prepared for: \(profile.fullName)
+            Account: \(last4)
 
-            IMPORTANT RECORDKEEPING TIP:
-            Always send disputes via USPS Certified Mail with Return Receipt Requested. Keep a duplicate copy of everything you mail.
+            [ ] Photo ID
+            [ ] Proof of address
+            [ ] Credit report page \(pages)
+            [ ] Certified mail tracking number
+            [ ] Notes from any phone calls
+
+            NOTICE: Draft for review. Mosaic is not a lawyer or credit-repair company.
             """
 
         case .freezeChecklist:
             return """
-            CREDIT FREEZE & FRAUD ALERT CHECKLIST
-            Protect your file across the three nationwide credit bureaus.
+            TOPIC: Credit freeze checklist
+            ISSUE: Freezes are free and you place them yourself.
 
-            A credit freeze stops potential creditors from pulling your credit file without your PIN/permission. It is 100% free by federal law.
+            Prepared for: \(profile.fullName)
 
-            [ ] 1. EQUIFAX FREEZE:
-                Online: https://www.equifax.com/personal/credit-report-services/credit-freeze/
-                Phone: 1-800-349-9960
-                Confirmation / PIN: [____________________]
+            [ ] Equifax freeze
+            [ ] Experian freeze
+            [ ] TransUnion freeze
 
-            [ ] 2. EXPERIAN FREEZE:
-                Online: https://www.experian.com/freeze/center.html
-                Phone: 1-888-397-3742
-                Confirmation / PIN: [____________________]
+            Official guide: https://consumer.ftc.gov/articles/credit-freezes-and-fraud-alerts
 
-            [ ] 3. TRANSUNION FREEZE:
-                Online: https://www.transunion.com/credit-freeze
-                Phone: 1-888-909-8872
-                Confirmation / PIN: [____________________]
-
-            [ ] 4. FRAUD ALERT (Optional):
-                Places a notice requiring creditors to take extra steps to verify your identity before opening accounts.
-                Placing an alert with ANY ONE bureau automatically notifies the other two.
-
-            Official FTC Guide: https://consumer.ftc.gov/articles/credit-freezes-and-fraud-alerts
+            NOTICE: Draft for review. Mosaic does not place freezes for you.
             """
         }
     }

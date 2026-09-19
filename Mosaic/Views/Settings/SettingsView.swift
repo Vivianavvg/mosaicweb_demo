@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var notificationWording: String = "Discreet ('Mosaic update')"
     @State private var showDeleteConfirm: Bool = false
     @State private var toastMessage: String? = nil
+    @State private var isDevToolsExpanded = false
 
     private var initials: String {
         let name = appState.userName ?? "Mosaic"
@@ -18,15 +19,17 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LiquidGlassBackground()
+                Color.mosaicPage.ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        MosaicSheet {
-                            VStack(alignment: .leading, spacing: 20) {
-                                Text("Settings")
-                                    .font(MosaicFont.medium(28))
-                                    .foregroundColor(Color.mosaicInk)
+                    VStack(alignment: .leading, spacing: 20) {
+                                HStack {
+                                    Text("Settings")
+                                        .font(MosaicFont.medium(28))
+                                        .foregroundColor(Color.mosaicInk)
+                                    Spacer()
+                                    QuickExitButton()
+                                }
 
                                 if let toast = toastMessage {
                                     Text(toast)
@@ -42,7 +45,7 @@ struct SettingsView: View {
                                     .tracking(0.6)
                                     .foregroundColor(Color.mosaicMuted)
 
-                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16) {
+                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16, shadowRadius: 0) {
                                     VStack(spacing: 14) {
                                         Toggle(isOn: $appState.isBiometricLockEnabled) {
                                             VStack(alignment: .leading, spacing: 2) {
@@ -85,7 +88,7 @@ struct SettingsView: View {
                                     .tracking(0.6)
                                     .foregroundColor(Color.mosaicMuted)
 
-                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16) {
+                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16, shadowRadius: 0) {
                                     VStack(alignment: .leading, spacing: 10) {
                                         Text("Erase stored reports")
                                             .font(MosaicFont.medium(15))
@@ -110,7 +113,7 @@ struct SettingsView: View {
                                     .tracking(0.6)
                                     .foregroundColor(Color.mosaicMuted)
 
-                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16) {
+                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16, shadowRadius: 0) {
                                     VStack(alignment: .leading, spacing: 12) {
                                         HStack(spacing: 12) {
                                             Text(initials)
@@ -123,7 +126,7 @@ struct SettingsView: View {
                                                 Text(appState.userName ?? "Mosaic User")
                                                     .font(MosaicFont.medium(15))
                                                     .foregroundColor(Color.mosaicInk)
-                                                Text(appState.userEmail ?? "demo@hackhers.org")
+                                                Text(appState.userEmail ?? "No email added")
                                                     .font(MosaicFont.regular(12))
                                                     .foregroundColor(Color.mosaicMuted)
                                             }
@@ -145,23 +148,45 @@ struct SettingsView: View {
                                     }
                                 }
 
-                                Text("Connected")
-                                    .font(MosaicFont.medium(13))
-                                    .tracking(0.6)
-                                    .foregroundColor(Color.mosaicMuted)
+                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16, shadowRadius: 0) {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                isDevToolsExpanded.toggle()
+                                            }
+                                        } label: {
+                                            HStack(spacing: 12) {
+                                                VStack(alignment: .leading, spacing: 3) {
+                                                    Text("Dev tools")
+                                                        .font(MosaicFont.medium(15))
+                                                        .foregroundColor(Color.mosaicInk)
+                                                    Text("Connected services and integrations")
+                                                        .font(MosaicFont.regular(12))
+                                                        .foregroundColor(Color.mosaicMuted)
+                                                }
+                                                Spacer()
+                                                Image(systemName: isDevToolsExpanded ? "chevron.up" : "chevron.down")
+                                                    .font(.system(size: 13, weight: .semibold))
+                                                    .foregroundColor(Color.mosaicSubtle)
+                                            }
+                                            .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
 
-                                LiquidGlassCard(cornerRadius: 24, contentPadding: 16) {
-                                    VStack(spacing: 12) {
-                                        IntegrationRow(name: "Auth0", status: "Active")
-                                        IntegrationRow(name: "Gemini 3.6 Flash", status: "Active")
-                                        IntegrationRow(name: "Tiger Data", status: "Active")
-                                        IntegrationRow(name: "Backboard", status: "Active")
+                                        if isDevToolsExpanded {
+                                            Divider().background(Color.mosaicLine)
+                                            VStack(spacing: 12) {
+                                                IntegrationRow(name: "Auth0", status: "Active")
+                                                IntegrationRow(name: "Mosaic AI · Backboard + Gemini", status: "Active")
+                                            }
+                                            .transition(.opacity.combined(with: .move(edge: .top)))
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        .padding(.bottom, 24)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 22)
+                    .padding(.bottom, 80)
                 }
             }
             .navigationBarHidden(true)

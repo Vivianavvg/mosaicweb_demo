@@ -115,6 +115,7 @@ public struct LiquidGlassCard<Content: View>: View {
     public let cornerRadius: CGFloat
     public let borderOpacity: CGFloat
     public let contentPadding: CGFloat
+    public let shadowRadius: CGFloat
     public let content: Content
 
     public init(
@@ -122,12 +123,14 @@ public struct LiquidGlassCard<Content: View>: View {
         cornerRadius: CGFloat = 24,
         borderOpacity: CGFloat = 0.7,
         contentPadding: CGFloat = 16,
+        shadowRadius: CGFloat = 14,
         @ViewBuilder content: () -> Content
     ) {
         self.tint = tint
         self.cornerRadius = cornerRadius
         self.borderOpacity = borderOpacity
         self.contentPadding = contentPadding
+        self.shadowRadius = shadowRadius
         self.content = content()
     }
 
@@ -138,7 +141,7 @@ public struct LiquidGlassCard<Content: View>: View {
                 tint: tint,
                 cornerRadius: cornerRadius,
                 borderOpacity: borderOpacity,
-                shadowRadius: 14
+                shadowRadius: shadowRadius
             )
     }
 }

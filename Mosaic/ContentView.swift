@@ -3,6 +3,7 @@ import Auth0
 
 struct ContentView: View {
     @StateObject private var appState = AppState.shared
+    @Environment(\.scenePhase) private var scenePhase
     private let credentialsManager = CredentialsManager(authentication: Auth0.authentication())
 
     @State private var user: UserInfo?
@@ -55,14 +56,13 @@ struct ContentView: View {
                 }
             } else if appState.isAuthenticated {
                 MainTabView(
-                    user: user,
-                    onLogout: logout,
-                    webAuth: webAuth
+                    onLogout: logout
                 )
                 .transition(.opacity)
             } else {
                 WelcomeView(
                     onLogin: { login() },
+                    onDemo: { startDemo() },
                     isAuthenticating: isAuthenticating,
                     authErrorMessage: authErrorMessage
                 )
@@ -72,10 +72,14 @@ struct ContentView: View {
         .environmentObject(appState)
         .animation(.easeInOut(duration: 0.3), value: appState.isAuthenticated)
         .animation(.easeInOut(duration: 0.3), value: isLoading)
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .inactive || newPhase == .background {
+                appState.lockForBackground()
+            }
+        }
         .onAppear {
             if CommandLine.arguments.contains("--demo") {
-                appState.startDemoMode()
-                isLoading = false
+                startDemo()
                 return
             }
             guard credentialsManager.canRenew() else {
@@ -87,10 +91,9 @@ struct ContentView: View {
                     self.user = credentialsManager.user
                     if let user = self.user {
                         appState.userEmail = user.email
-                        appState.userName = user.name
+                        appState.userName = nil
                         appState.userSub = user.sub
                         appState.isAuthenticated = true
-                        appState.loadSyntheticDemo()
                     }
                 }
                 isLoading = false
@@ -119,11 +122,11 @@ struct ContentView: View {
                 self.user = credentialsManager.user
                 if let u = self.user {
                     appState.userEmail = u.email
-                    appState.userName = u.name
+                    appState.userName = nil
                     appState.userSub = u.sub
                 }
                 appState.isAuthenticated = true
-                appState.loadSyntheticDemo()
+                isAuthenticating = false
             case .failure(let error):
                 isAuthenticating = false
                 if error.localizedDescription.lowercased().contains("cancel") {
@@ -134,6 +137,11 @@ struct ContentView: View {
                 print("Auth0 Login failed: \(error)")
             }
         }
+    }
+
+    private func startDemo() {
+        appState.startDemoMode()
+        isLoading = false
     }
 
     private func logout() {

@@ -45,6 +45,9 @@ public enum ChangeSeverity: String, Codable, CaseIterable {
 public enum UserClassification: String, Codable, CaseIterable {
     case recognized = "recognized"
     case unrecognized = "unrecognized"
+    case jointOrShared = "joint_or_shared"
+    case authorizedUser = "authorized_user"
+    case someoneElseOpened = "someone_else_opened"
     case pressuredOrNotFreelyAgreed = "pressured_or_not_freely_agreed"
     case notSure = "not_sure"
     case ignored = "ignored"
@@ -53,6 +56,9 @@ public enum UserClassification: String, Codable, CaseIterable {
         switch self {
         case .recognized: return "Recognized"
         case .unrecognized: return "Unrecognized"
+        case .jointOrShared: return "Joint / Shared"
+        case .authorizedUser: return "Authorized User"
+        case .someoneElseOpened: return "Someone Else Opened It"
         case .pressuredOrNotFreelyAgreed: return "Pressured / No Consent"
         case .notSure: return "Not Sure"
         case .ignored: return "Ignore"
@@ -65,6 +71,12 @@ public enum UserClassification: String, Codable, CaseIterable {
             return "I opened and authorized this account myself."
         case .unrecognized:
             return "I did not open, authorize, or use this account."
+        case .jointOrShared:
+            return "This may be a joint or shared account."
+        case .authorizedUser:
+            return "I may be listed as an authorized user."
+        case .someoneElseOpened:
+            return "Someone else may have opened or used this account."
         case .pressuredOrNotFreelyAgreed:
             return "I was pressured or did not freely agree to this account."
         case .notSure:

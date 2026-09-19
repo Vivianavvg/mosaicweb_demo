@@ -1,10 +1,7 @@
 import SwiftUI
-import Auth0
 
 struct MainTabView: View {
-    let user: UserInfo?
     let onLogout: () -> Void
-    let webAuth: () -> WebAuth
 
     @State private var selectedTab: Int = {
         if CommandLine.arguments.contains("--tab=1") { return 1 }
@@ -14,10 +11,8 @@ struct MainTabView: View {
         return 0
     }()
 
-    init(user: UserInfo?, onLogout: @escaping () -> Void, webAuth: @escaping () -> WebAuth) {
-        self.user = user
+    init(onLogout: @escaping () -> Void) {
         self.onLogout = onLogout
-        self.webAuth = webAuth
     }
 
     var body: some View {
@@ -27,7 +22,7 @@ struct MainTabView: View {
                 .tag(0)
 
             ScanView()
-                .tabItem { Label("Scan", systemImage: "doc.text.magnifyingglass") }
+                .tabItem { Label("Review", systemImage: "rectangle.stack.fill") }
                 .tag(1)
 
             RecoveryView()
@@ -35,7 +30,7 @@ struct MainTabView: View {
                 .tag(2)
 
             LearnView()
-                .tabItem { Label("Learn", systemImage: "book.fill") }
+                .tabItem { Label("Learn", systemImage: "book.closed.fill") }
                 .tag(3)
 
             SettingsView(onLogout: onLogout)

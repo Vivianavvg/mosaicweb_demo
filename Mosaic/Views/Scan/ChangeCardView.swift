@@ -82,29 +82,29 @@ struct ChangeCardView: View {
 
                 // Classification Section
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Did you authorize this?")
+                    Text("Which description fits your records?")
                         .font(.caption.bold())
                         .foregroundColor(Color.mosaicMuted)
 
                     // 5 classification buttons
                     VStack(spacing: 6) {
                         ClassificationButton(
-                            title: "This was mine",
-                            subtitle: "Recognized personal charge",
+                            title: "Mine",
+                            subtitle: "I recognize opening and using this account",
                             icon: "checkmark.seal.fill",
                             isSelected: item.classification == .recognized,
                             action: { onClassify(.recognized) }
                         )
                         ClassificationButton(
-                            title: "I didn't authorize this",
-                            subtitle: "Unfamiliar charge or potential identity theft",
+                            title: "Not mine",
+                            subtitle: "I do not recognize opening or using this account",
                             icon: "shield.slash.fill",
                             isSelected: item.classification == .unrecognized,
                             action: { onClassify(.unrecognized) }
                         )
                         ClassificationButton(
-                            title: "I was pressured / coerced into this",
-                            subtitle: "Opened under duress or by an ex-partner (Coerced Debt)",
+                            title: "No safe consent",
+                            subtitle: "I was pressured or did not freely agree",
                             icon: "person.crop.circle.badge.exclamationmark.fill",
                             isSelected: item.classification == .pressuredOrNotFreelyAgreed,
                             action: { onClassify(.pressuredOrNotFreelyAgreed) }
@@ -131,9 +131,7 @@ struct ChangeCardView: View {
                 // Calm transition & Packet Creation Prompt
                 if item.classification == .unrecognized || item.classification == .pressuredOrNotFreelyAgreed {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(item.classification == .pressuredOrNotFreelyAgreed
-                             ? "🕊️ Coerced Debt Identified: Under state and federal protections, you have legal rights to contest debt opened under duress without your voluntary consent."
-                             : "🛡️ Unauthorized Item: Mosaic can generate your formal dispute letters to have this removed from your credit file.")
+                        Text("This may need a closer review. Keep your records together and consider asking the bureau or creditor to investigate. Mosaic cannot determine fraud or guarantee a removal.")
                             .font(.caption)
                             .foregroundColor(Color.mosaicAccent)
                             .lineSpacing(2)
@@ -141,7 +139,7 @@ struct ChangeCardView: View {
                         Button(action: onCreatePacket) {
                             HStack {
                                 Image(systemName: "folder.badge.plus")
-                                Text("Generate My Legal Dispute Packet")
+                                Text("Prepare a reviewable dispute packet")
                             }
                             .font(.subheadline.bold())
                             .foregroundColor(.white)

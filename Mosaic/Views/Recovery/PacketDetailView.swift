@@ -115,6 +115,12 @@ struct PacketDetailView: View {
         switch packet.classificationAtCreation {
         case .unrecognized:
             return "You said you did not open this."
+        case .someoneElseOpened:
+            return "You said someone else may have opened or used this."
+        case .jointOrShared:
+            return "You said this may be joint or shared."
+        case .authorizedUser:
+            return "You said you may be an authorized user."
         case .recognized:
             return "You said you know this account."
         case .pressuredOrNotFreelyAgreed:

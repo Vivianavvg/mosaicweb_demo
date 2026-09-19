@@ -1,154 +1,336 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
     @Binding var selectedTab: Int
-    @State private var assistantSummary = "Your latest report is ready for a calm, item-by-item review."
-    @State private var isLoadingSummary = false
 
-    private var displayName: String {
-        appState.userName?.split(separator: " ").first.map(String.init) ?? "there"
+    @State private var assistantSummary = "Upload a credit report PDF to get started. Mosaic will read it on-device, explain each change, and help you decide what to review next."
+    @State private var assistantReply: String?
+    @State private var lastUserPrompt = ""
+    @State private var prompt = ""
+    @State private var isAgentProcessing = false
+    @State private var showFileImporter = false
+    @State private var showImportMessage = false
+    @State private var importMessage = ""
+    @State private var isImporting = false
+    @FocusState private var isPromptFocused: Bool
+
+    private var openTaskCount: Int {
+        appState.tasks.filter { !$0.isCompleted }.count
     }
 
     var body: some View {
         ZStack {
-            Color.mosaicPage.ignoresSafeArea()
+            LinearGradient(
+                colors: Color.mosaicHomeGradientColors,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Good morning")
-                            .font(MosaicFont.regular(17))
-                            .foregroundColor(Color.mosaicSubtle)
-                        Text(displayName)
-                            .font(MosaicFont.medium(36))
-                            .foregroundColor(Color.mosaicInk)
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+
+                    if appState.isDemoMode {
+                        HStack(alignment: .top, spacing: 10) {
+                            SyntheticBadge()
+                            Text("Sample data only — not your credit report.")
+                                .font(MosaicFont.regular(12))
+                                .foregroundColor(Color.mosaicSubtle)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
 
-                    LiquidGlassCard(tint: Color.mosaicMint, cornerRadius: 28, contentPadding: 20) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(Color.mosaicViolet)
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.white.opacity(0.72))
-                                    .clipShape(Circle())
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Mosaic brief")
-                                        .font(MosaicFont.medium(17))
-                                        .foregroundColor(Color.mosaicInk)
-                                    Text("A short read on what needs your attention")
-                                        .font(MosaicFont.regular(12))
-                                        .foregroundColor(Color.mosaicSubtle)
-                                }
-                            }
+                    VStack(alignment: .leading, spacing: 22) {
+                        if !lastUserPrompt.isEmpty {
+                            userBubble(text: lastUserPrompt)
+                        }
 
-                            if isLoadingSummary {
-                                ProgressView()
-                                    .tint(Color.mosaicViolet)
-                            } else {
-                                Text(assistantSummary)
-                                    .font(MosaicFont.regular(16))
-                                    .foregroundColor(Color.mosaicInk)
-                                    .lineSpacing(4)
-                            }
+                        if lastUserPrompt.isEmpty {
+                            Text("Your next step")
+                                .font(MosaicFont.medium(12))
+                                .tracking(0.6)
+                                .foregroundColor(Color.mosaicSubtle)
+
+                            Text(assistantSummary)
+                                .font(MosaicFont.regular(17))
+                                .foregroundColor(Color.mosaicInk)
+                                .lineSpacing(5)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else if let assistantReply, !assistantReply.isEmpty {
+                            Text(assistantReply)
+                                .font(MosaicFont.regular(17))
+                                .foregroundColor(Color.mosaicInk)
+                                .lineSpacing(5)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        if isAgentProcessing {
+                            ProgressView()
+                                .tint(Color.mosaicViolet)
+                        }
+
+                        if lastUserPrompt.isEmpty {
+                            suggestions
 
                             Button {
-                                selectedTab = 1
+                                showFileImporter = true
                             } label: {
-                                Label("Review changes", systemImage: "arrow.right")
-                                    .font(MosaicFont.medium(14))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
+                                HStack(spacing: 10) {
+                                    if isImporting {
+                                        ProgressView()
+                                            .tint(Color.mosaicViolet)
+                                    } else {
+                                        Image(systemName: "doc.badge.plus")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(Color.mosaicViolet)
+                                    }
+
+                                    Text(isImporting ? "Reading report…" : "Add a credit report")
+                                        .font(MosaicFont.medium(15))
+                                        .foregroundColor(Color.mosaicInk)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 18, shadowRadius: 0)
                             }
-                            .buttonStyle(.liquidGlass(tint: Color.mosaicViolet, isProminent: true))
+                            .disabled(isImporting)
+                            .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 24)
-
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                        OverviewMetric(icon: "arrow.triangle.2.circlepath", title: "Changes", value: "\(appState.changeItems.count)", detail: "to review")
-                        OverviewMetric(icon: "checkmark.circle", title: "Open tasks", value: "\(appState.tasks.filter { !$0.isCompleted }.count)", detail: "next steps")
-                    }
-                    .padding(.horizontal, 24)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Next step")
-                            .font(MosaicFont.medium(20))
-                            .foregroundColor(Color.mosaicInk)
-                        HStack(spacing: 12) {
-                            Image(systemName: appState.tasks.first(where: { !$0.isCompleted }) == nil ? "checkmark.seal" : "calendar.badge.clock")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(Color.mosaicViolet)
-                                .frame(width: 42, height: 42)
-                                .background(Color.mosaicMint)
-                                .clipShape(Circle())
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(appState.tasks.first(where: { !$0.isCompleted })?.title ?? "You are all caught up")
-                                    .font(MosaicFont.medium(15))
-                                    .foregroundColor(Color.mosaicInk)
-                                Text(appState.tasks.first(where: { !$0.isCompleted }) == nil ? "No open tasks right now." : "Review the draft before sending anything.")
-                                    .font(MosaicFont.regular(13))
-                                    .foregroundColor(Color.mosaicSubtle)
-                            }
-                        }
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .liquidGlass(cornerRadius: 24, shadowRadius: 8)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 28)
+                    .padding(.bottom, 28)
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            composer
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.pdf],
+            allowsMultipleSelection: false,
+            onCompletion: handleImport
+        )
+        .alert("Report import", isPresented: $showImportMessage) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(importMessage)
         }
         .task(id: appState.changeItems.count) {
             await refreshAssistantSummary()
         }
     }
 
-    private func refreshAssistantSummary() async {
-        isLoadingSummary = true
-        assistantSummary = await GeminiService.shared.generateOverviewSummary(
-            changeItems: appState.changeItems,
-            openTaskCount: appState.tasks.filter { !$0.isCompleted }.count
-        )
-        isLoadingSummary = false
-    }
-}
-
-private struct OverviewMetric: View {
-    let icon: String
-    let title: String
-    let value: String
-    let detail: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(Color.mosaicViolet)
-            Text(title)
-                .font(MosaicFont.regular(13))
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text("Your credit report")
+                .font(MosaicFont.medium(28))
+                .foregroundColor(Color.mosaicInk)
+            Text("Mosaic finds important changes, explains what they mean, and helps you decide what to do next.")
+                .font(MosaicFont.regular(15))
                 .foregroundColor(Color.mosaicSubtle)
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(value)
-                    .font(MosaicFont.medium(26))
-                    .foregroundColor(Color.mosaicInk)
-                Text(detail)
-                    .font(MosaicFont.regular(12))
-                    .foregroundColor(Color.mosaicSubtle)
-            }
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.white)
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.mosaicLine, lineWidth: 1)
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+    }
+
+    private func userBubble(text: String) -> some View {
+        HStack {
+            Spacer(minLength: 36)
+            Text(text)
+                .font(MosaicFont.regular(15))
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.mosaicViolet)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var suggestions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Try asking")
+                .font(MosaicFont.medium(12))
+                .tracking(0.6)
+                .foregroundColor(Color.mosaicSubtle)
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(suggestedQuestions, id: \.self) { question in
+                    Button {
+                        prompt = question
+                        isPromptFocused = true
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(question)
+                                .font(MosaicFont.medium(13))
+                        }
+                        .foregroundColor(Color.mosaicViolet)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var suggestedQuestions: [String] {
+        if appState.changeItems.isEmpty {
+            return [
+                "How do I upload a report?",
+                "What does my report show?",
+                "What should I do first?"
+            ]
+        }
+
+        if openTaskCount > 0 {
+            return [
+                "What should I review first?",
+                "Which task matters most?",
+                "Explain my biggest change"
+            ]
+        }
+
+        return [
+            "What should I review first?",
+            "Explain my biggest change",
+            "What can I do next?"
+        ]
+    }
+
+    private var composer: some View {
+        HStack(alignment: .center, spacing: 10) {
+            ZStack(alignment: .leading) {
+                if prompt.isEmpty {
+                    Text("Ask what changed or what to do next")
+                        .font(MosaicFont.regular(15))
+                        .foregroundColor(Color.mosaicSubtle)
+                        .allowsHitTesting(false)
+                }
+
+                TextField("", text: $prompt, axis: .vertical)
+                    .font(MosaicFont.regular(15))
+                    .foregroundColor(Color.mosaicInk)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1...4)
+                    .focused($isPromptFocused)
+                    .submitLabel(.send)
+                    .textInputAutocapitalization(.sentences)
+                    .textFieldStyle(.plain)
+                    .onSubmit(submitPrompt)
+                    .onTapGesture { isPromptFocused = true }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { isPromptFocused = true }
+
+            Button(action: submitPrompt) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(
+                        prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? Color.mosaicMuted
+                            : Color(red: 0.35, green: 0.45, blue: 0.78)
+                    )
+            }
+            .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAgentProcessing)
+            .accessibilityLabel("Send message")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 28, shadowRadius: 0)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .background(.clear)
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded { isPromptFocused = true })
+    }
+
+    private func refreshAssistantSummary() async {
+        assistantSummary = localSummary
+        let generatedSummary = await GeminiService.shared.generateOverviewSummary(
+            changeItems: appState.changeItems,
+            openTaskCount: openTaskCount
+        )
+        if !generatedSummary.isEmpty {
+            assistantSummary = generatedSummary
+        }
+    }
+
+    private var localSummary: String {
+        let changeCount = appState.changeItems.count
+        if changeCount == 0 {
+            return "Upload a credit report PDF to get started. Mosaic will read it on-device, explain each change, and help you decide what to review next."
+        }
+        return "You have \(changeCount) report change\(changeCount == 1 ? "" : "s") to review. Open Review to confirm what you recognize, or ask Mosaic to explain what matters first."
+    }
+
+    private func submitPrompt() {
+        let value = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, !isAgentProcessing else { return }
+
+        lastUserPrompt = value
+        prompt = ""
+        assistantReply = nil
+        isPromptFocused = false
+        isAgentProcessing = true
+
+        Task { @MainActor in
+            if let backboardReply = await BackboardService.shared.generateAgentReply(
+                userMessage: value,
+                changeItems: appState.changeItems,
+                openTaskCount: openTaskCount
+            ), !backboardReply.isEmpty {
+                assistantReply = backboardReply
+            } else {
+                let turn = await GeminiService.shared.generateAgentTurn(
+                    userMessage: value,
+                    changeItems: appState.changeItems,
+                    openTaskCount: openTaskCount
+                )
+                if let reply = turn.reply, !reply.isEmpty {
+                    assistantReply = reply
+                }
+            }
+            isAgentProcessing = false
+        }
+    }
+
+    private func handleImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .failure(let error):
+            importMessage = "Mosaic could not open that file: \(error.localizedDescription)"
+            showImportMessage = true
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            Task { @MainActor in
+                isImporting = true
+                defer { isImporting = false }
+
+                do {
+                    let extraction = try await appState.importCreditReport(from: url)
+                    if extraction.isSynthetic {
+                        importMessage = "Sample report loaded. Mosaic read \(extraction.pageCount) pages and generated the review deck."
+                    } else {
+                        importMessage = "Mosaic read and redacted \(extraction.pageCount) pages on-device. This build can preview the extracted text, but structured account mapping for arbitrary bureau PDFs still needs to be connected."
+                    }
+                } catch {
+                    importMessage = error.localizedDescription
+                }
+                showImportMessage = true
+            }
+        }
     }
 }

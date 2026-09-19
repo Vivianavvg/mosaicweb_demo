@@ -7,7 +7,7 @@ public struct QuickExitButton: View {
     public init() {}
 
     public var body: some View {
-        MosaicCircleButton(systemName: "square.and.arrow.up") {
+        MosaicCircleButton(systemName: "lock.fill") {
             withAnimation(.easeInOut(duration: 0.2)) {
                 appState.isAppLocked = true
             }

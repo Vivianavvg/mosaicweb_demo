@@ -11,8 +11,10 @@ struct AgentComposer: View {
             type: .mobile,
             level: mic.level,
             processing: isProcessing || mic.state == .live,
-            colorVariant: .colorful,
-            strength: 0.95
+            colorVariant: .ocean,
+            strength: mic.state == .live || isProcessing ? 0.68 : 0.28,
+            reach: mic.state == .live || isProcessing ? 1 : 0.72,
+            spread: 0.82
         ) {
             VStack(alignment: .leading, spacing: 8) {
                 if mic.state == .live {
