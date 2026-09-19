@@ -22,6 +22,8 @@ public final class AppState: ObservableObject {
     @Published public var priorSnapshot: ReportSnapshot? = nil
     @Published public var currentSnapshot: ReportSnapshot? = nil
     @Published public var changeItems: [ChangeItem] = []
+    /// Recipient addresses found verbatim in the imported report, kept on-device.
+    @Published public var reportEmailCandidates: [String] = []
 
     // Recovery & Tasks
     @Published public var recoveryPackets: [RecoveryPacket] = []
@@ -73,8 +75,8 @@ public final class AppState: ObservableObject {
         loadSyntheticDemo()
     }
 
-    /// Reads a user-selected credit report and applies any recognized demo data.
-    /// Both Home and Review use this path so importing behaves the same everywhere.
+    /// Reads a user-selected credit report into memory, seals a local copy, then parses only decrypted bytes.
+    /// Synthetic detection remains unchanged for the explicit demo fixture path.
     public func importCreditReport(from url: URL) async throws -> (isSynthetic: Bool, pageCount: Int) {
         let secured = url.startAccessingSecurityScopedResource()
         defer {
@@ -83,7 +85,14 @@ public final class AppState: ObservableObject {
             }
         }
 
-        let extraction = try await PDFExtractionService.shared.extract(from: url)
+        let importedData = try Data(contentsOf: url, options: [.mappedIfSafe])
+        let encryptedURL = try SecurityManager.shared.encryptPDF(
+            importedData,
+            originalFilename: url.lastPathComponent
+        )
+        let protectedData = try SecurityManager.shared.decryptPDF(at: encryptedURL)
+        let extraction = try await PDFExtractionService.shared.extract(from: protectedData)
+        reportEmailCandidates = PDFExtractionService.shared.emailAddresses(in: extraction.pages)
         if extraction.isSynthetic {
             isDemoMode = true
             loadSyntheticDemo()
@@ -105,6 +114,9 @@ public final class AppState: ObservableObject {
 
         self.priorSnapshot = prior
         self.currentSnapshot = current
+        if !isDemoMode {
+            reportEmailCandidates = []
+        }
 
         // Run normalized diff
         let diffChanges = ReportDiffEngine.shared.diff(current: current, prior: prior)
@@ -360,6 +372,7 @@ public final class AppState: ObservableObject {
         priorSnapshot = nil
         currentSnapshot = nil
         changeItems.removeAll()
+        reportEmailCandidates.removeAll()
         recoveryPackets.removeAll()
         tasks.removeAll()
         savedItems.removeAll()
@@ -370,6 +383,7 @@ public final class AppState: ObservableObject {
         canUndoLastReview = false
         lastReviewedItemID = nil
         undoneReviewItemIDs.removeAll()
+        SecurityManager.shared.purgeEncryptedStore()
         SecurityManager.shared.purgeTemporaryFiles()
         BackboardService.shared.clearMemory()
         analytics = AnalyticsSummary(

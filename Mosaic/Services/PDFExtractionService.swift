@@ -16,13 +16,49 @@ public struct PageExtractionResult {
 public final class PDFExtractionService {
     public static let shared = PDFExtractionService()
 
+    private static let emailPattern = #"[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}"#
+
     private init() {}
+
+    /// Returns email addresses that were actually printed in the imported report.
+    /// This stays local; Mosaic never invents a recipient address from an issuer name.
+    public func emailAddresses(in pages: [PageExtractionResult]) -> [String] {
+        var seen = Set<String>()
+        var addresses: [String] = []
+
+        for page in pages {
+            guard let regex = try? NSRegularExpression(pattern: Self.emailPattern) else { continue }
+            let range = NSRange(page.rawText.startIndex..<page.rawText.endIndex, in: page.rawText)
+            for match in regex.matches(in: page.rawText, range: range) {
+                guard let matchRange = Range(match.range, in: page.rawText) else { continue }
+                let address = String(page.rawText[matchRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                let key = address.lowercased()
+                if seen.insert(key).inserted {
+                    addresses.append(address)
+                }
+            }
+        }
+
+        return addresses
+    }
 
     /// Extracts text from PDF document at URL, falling back to Vision OCR if digital text is empty
     public func extract(from url: URL) async throws -> (pages: [PageExtractionResult], isSynthetic: Bool, pageCount: Int) {
-        guard let pdfDocument = PDFDocument(url: url) else {
+        guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else {
             throw NSError(domain: "PDFExtractionService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Unable to read PDF file format."])
         }
+        return try await extract(from: data)
+    }
+
+    /// Extracts text from in-memory PDF bytes, falling back to Vision OCR if digital text is empty.
+    public func extract(from data: Data) async throws -> (pages: [PageExtractionResult], isSynthetic: Bool, pageCount: Int) {
+        guard let pdfDocument = PDFDocument(data: data) else {
+            throw NSError(domain: "PDFExtractionService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Unable to read PDF file format."])
+        }
+        return await extract(from: pdfDocument)
+    }
+
+    private func extract(from pdfDocument: PDFDocument) async -> (pages: [PageExtractionResult], isSynthetic: Bool, pageCount: Int) {
 
         let pageCount = pdfDocument.pageCount
         var results: [PageExtractionResult] = []

@@ -78,6 +78,11 @@ struct ContentView: View {
         }
         .onAppear {
 #if DEBUG
+            if CommandLine.arguments.contains("--demo") {
+                appState.startDemoMode()
+                isLoading = false
+                return
+            }
             if let importArgument = CommandLine.arguments.first(where: { $0.hasPrefix("--import-file=") }) {
                 let prefix = "--import-file="
                 let path = String(importArgument.dropFirst(prefix.count))

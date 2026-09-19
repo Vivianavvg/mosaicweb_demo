@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
 
-    @State private var assistantSummary = "Your report workspace is ready. Import a report to see the changes that matter. Mosaic will explain what to review next."
     @State private var assistantReply: String?
     @State private var lastUserPrompt = ""
     @State private var prompt = ""
@@ -29,12 +28,6 @@ struct OverviewView: View {
         appState.tasks.filter { !$0.isCompleted }.count
     }
 
-    private var reviewStateKey: String {
-        appState.changeItems
-            .map { "\($0.id.uuidString):\($0.classification?.rawValue ?? "pending")" }
-            .joined(separator: "|")
-    }
-
     var body: some View {
         ZStack {
             MosaicPaletteBackground(opacity: 1.0)
@@ -42,6 +35,7 @@ struct OverviewView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     reportMetric
+                    uploadReportAction
 
                     VStack(alignment: .leading, spacing: 22) {
                         if !lastUserPrompt.isEmpty {
@@ -49,10 +43,9 @@ struct OverviewView: View {
                         }
 
                         if lastUserPrompt.isEmpty {
-                            summarySection
                             nextStepSection
                         } else if let assistantReply, !assistantReply.isEmpty {
-                            Text(assistantReply)
+                            assistantReplyView(assistantReply)
                                 .font(MosaicFont.regular(17))
                                 .foregroundColor(Color.mosaicInk)
                                 .lineSpacing(5)
@@ -89,16 +82,14 @@ struct OverviewView: View {
         } message: {
             Text(importMessage)
         }
-        .task(id: reviewStateKey) {
-            await refreshAssistantSummary()
-        }
     }
 
     private var reportMetric: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .center, spacing: 8) {
             Text("Your credit report")
                 .font(MosaicFont.medium(22))
                 .foregroundColor(Color.mosaicInk)
+                .multilineTextAlignment(.center)
 
             netDebtIndicator
 
@@ -111,10 +102,55 @@ struct OverviewView: View {
                     .font(MosaicFont.regular(13))
                     .foregroundColor(Color.mosaicSubtle)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 20)
-        .padding(.top, 30)
+        .padding(.top, 52)
         .padding(.bottom, 22)
+    }
+
+    @ViewBuilder
+    private func assistantReplyView(_ reply: String) -> some View {
+        if let formattedReply = try? AttributedString(
+            markdown: reply,
+            options: .init(interpretedSyntax: .full)
+        ) {
+            Text(formattedReply)
+        } else {
+            Text(reply)
+        }
+    }
+
+    private var uploadReportAction: some View {
+        Button {
+            showFileImporter = true
+        } label: {
+            HStack(spacing: 9) {
+                if isImporting {
+                    ProgressView()
+                        .tint(Color.mosaicViolet)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Text(isImporting
+                     ? "Reading report…"
+                     : (appState.changeItems.isEmpty ? "Add a credit report" : "Import another report"))
+                    .font(MosaicFont.medium(15))
+            }
+            .foregroundColor(Color.mosaicViolet)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 18, shadowRadius: 0)
+        }
+        .disabled(isImporting)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 4)
+        .accessibilityLabel(appState.changeItems.isEmpty ? "Add a credit report" : "Import another credit report")
+        .accessibilityHint("Opens the PDF picker")
     }
 
     @ViewBuilder
@@ -123,13 +159,16 @@ struct OverviewView: View {
             let isAdded = deltaCents > 0
             let isReduced = deltaCents < 0
             let indicatorColor = isAdded ? Color.red : (isReduced ? Color.green : Color.mosaicSubtle)
-            let icon = isAdded ? "arrow.up.right" : (isReduced ? "arrow.down.right" : "arrow.right")
+            let icon = isAdded ? "arrow.down.right" : (isReduced ? "arrow.up.right" : "arrow.right")
             let label = isAdded ? "Net debt added" : (isReduced ? "Net debt reduced" : "No net debt change")
 
+            // Balance the leading trend icon with an invisible trailing rail so
+            // the amount itself stays mathematically centered in the screen.
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(indicatorColor)
+                    .frame(width: 28)
                 VStack(alignment: .center, spacing: 1) {
                     Text(formattedCurrency(cents: abs(deltaCents)))
                         .font(MosaicFont.medium(48))
@@ -140,6 +179,9 @@ struct OverviewView: View {
                         .tracking(1.1)
                         .foregroundColor(Color.mosaicSubtle)
                 }
+                Color.clear
+                    .frame(width: 28, height: 28)
+                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, alignment: .center)
             .accessibilityElement(children: .combine)
@@ -171,22 +213,6 @@ struct OverviewView: View {
         formatter.currencySymbol = "$"
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: Double(cents) / 100.0)) ?? "$0"
-    }
-
-    private var summarySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Mosaic summary")
-                .font(MosaicFont.medium(12))
-                .tracking(0.6)
-                .foregroundColor(Color.mosaicSubtle)
-
-            Text(assistantSummary)
-                .font(MosaicFont.regular(16))
-                .foregroundColor(Color.mosaicInk)
-                .lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 
     @ViewBuilder
@@ -229,7 +255,7 @@ struct OverviewView: View {
                 }
             }
 
-            Text("Choose the answer that matches your records. Your choice tells Mosaic whether to save it, schedule a follow-up, or prepare a draft.")
+            Text("Tell Mosaic whether this change is yours, unfamiliar, or unclear.")
                 .font(MosaicFont.regular(13))
                 .foregroundColor(Color.mosaicSubtle)
                 .fixedSize(horizontal: false, vertical: true)
@@ -336,27 +362,9 @@ struct OverviewView: View {
                 .font(MosaicFont.regular(14))
                 .foregroundColor(Color.mosaicSubtle)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Button {
-                showFileImporter = true
-            } label: {
-                HStack(spacing: 9) {
-                    if isImporting {
-                        ProgressView()
-                            .tint(Color.mosaicViolet)
-                    } else {
-                        Image(systemName: "plus.circle.fill")
-                    }
-                    Text(isImporting ? "Reading report…" : "Add a credit report")
-                }
-                .font(MosaicFont.medium(15))
-                .foregroundColor(Color.mosaicViolet)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .liquidGlass(tint: Color.mosaicLavender, cornerRadius: 16, shadowRadius: 0)
-            }
-            .disabled(isImporting)
-            .buttonStyle(.plain)
+            Text("Use the Add a credit report button above to choose a PDF.")
+                .font(MosaicFont.regular(13))
+                .foregroundColor(Color.mosaicSubtle)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -405,22 +413,21 @@ struct OverviewView: View {
     }
 
     private var suggestions: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Try asking")
-                .font(MosaicFont.medium(12))
-                .tracking(0.6)
+                .font(MosaicFont.medium(16))
                 .foregroundColor(Color.mosaicSubtle)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(suggestedQuestions, id: \.self) { question in
                     Button {
                         chooseSuggestion(question)
                     } label: {
                         HStack(spacing: 7) {
                             Image(systemName: "arrow.up.right")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                             Text(question)
-                                .font(MosaicFont.medium(13))
+                                .font(MosaicFont.medium(15))
                         }
                         .foregroundColor(Color.mosaicViolet)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -441,8 +448,8 @@ struct OverviewView: View {
     private var suggestedQuestions: [String] {
         if appState.changeItems.isEmpty {
             return [
-                "How do I upload a report?",
-                "What does my report show?",
+                "How do I get my report?",
+                "What changed?",
                 "What should I do first?"
             ]
         }
@@ -451,13 +458,13 @@ struct OverviewView: View {
             return [
                 "What should I review first?",
                 "Which task matters most?",
-                "Explain my biggest change"
+                "Explain the biggest change"
             ]
         }
 
         return [
             "What should I review first?",
-            "Explain my biggest change",
+            "Explain the biggest change",
             "What can I do next?"
         ]
     }
@@ -515,27 +522,6 @@ struct OverviewView: View {
         .background(.clear)
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded { isPromptFocused = true })
-    }
-
-    private func refreshAssistantSummary() async {
-        assistantSummary = localSummary
-        let generatedSummary = await GeminiService.shared.generateOverviewSummary(
-            changeItems: appState.changeItems,
-            openTaskCount: openTaskCount
-        )
-        if !generatedSummary.isEmpty {
-            assistantSummary = generatedSummary
-        }
-    }
-
-    private var localSummary: String {
-        if appState.changeItems.isEmpty {
-            return "Your report workspace is ready. Import a report to see the changes that matter. Mosaic will explain what to review next."
-        }
-        if pendingItems.isEmpty {
-            return "You reviewed every change in this report. Ask Mosaic a question or revisit a follow-up task. Mosaic keeps the next decision clear."
-        }
-        return "You have \(pendingItems.count) change\(pendingItems.count == 1 ? "" : "s") left to review. Start with the guided choice below and check its source page. Mosaic will help you decide what to save, revisit, or draft."
     }
 
     private func submitPrompt() {
