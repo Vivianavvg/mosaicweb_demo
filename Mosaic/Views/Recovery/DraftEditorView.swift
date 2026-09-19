@@ -9,6 +9,9 @@ struct DraftEditorView: View {
     @State private var mailMessage = ""
     @State private var showProfileEditor = false
     @State private var profileDraft = LetterUserProfile()
+    @State private var recipientContact: RecipientContact?
+    @State private var isResolvingRecipient = false
+    @State private var hasReviewed = false
 
     var body: some View {
         ZStack {
@@ -16,11 +19,7 @@ struct DraftEditorView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Gemini draft", systemImage: "sparkles")
-                        .font(MosaicFont.medium(13))
-                        .foregroundColor(Color.mosaicViolet)
-
-                    Text(document.title)
+                    Text("Review before sending")
                         .font(MosaicFont.medium(24))
                         .foregroundColor(Color.mosaicInk)
                     Text("Review every fact before sending. Mosaic never sends anything automatically.")
@@ -28,6 +27,7 @@ struct DraftEditorView: View {
                         .foregroundColor(Color.mosaicSubtle)
 
                     recipientSection
+                    reviewAcknowledgement
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
@@ -39,10 +39,10 @@ struct DraftEditorView: View {
                 renderedLetter
                     .padding(.horizontal, 22)
                     .padding(.top, 22)
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 156)
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .bottom) {
             Button(action: openInDefaultMail) {
                 Label("Open in Mail", systemImage: "envelope.fill")
                     .font(MosaicFont.medium(15))
@@ -51,11 +51,13 @@ struct DraftEditorView: View {
                     .padding(.vertical, 13)
             }
             .buttonStyle(.plain)
+            .disabled(!hasReviewed)
+            .opacity(hasReviewed ? 1 : 0.45)
             .background(Color.mosaicViolet)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(Color.white.opacity(0.96))
+            .shadow(color: Color.black.opacity(0.16), radius: 18, y: 8)
+            .padding(.horizontal, 22)
+            .padding(.bottom, 14)
         }
         .hidesFloatingTabBar()
         .navigationTitle("Letter")
@@ -74,7 +76,7 @@ struct DraftEditorView: View {
                         TextField("Full name", text: $profileDraft.fullName)
                         TextField("Mailing address", text: $profileDraft.mailingAddress, axis: .vertical)
                         TextField("Phone", text: $profileDraft.phone)
-                        TextField("Email", text: $profileDraft.email)
+                        TextField("Your email", text: $profileDraft.email)
                             .textInputAutocapitalization(.never)
                             .keyboardType(.emailAddress)
                     }
@@ -102,10 +104,19 @@ struct DraftEditorView: View {
         }
         .onAppear {
             profileDraft = appState.letterProfile
+            hasReviewed = document.reviewedByUserAt != nil
             document.draftText = GeminiService.shared.fillUserInfo(
                 in: document.draftText,
                 profile: appState.letterProfile
             )
+        }
+        .onDisappear {
+            Task { @MainActor in
+                await appState.syncToCloud()
+            }
+        }
+        .task(id: document.id) {
+            await resolveRecipientContact()
         }
     }
 
@@ -117,12 +128,34 @@ struct DraftEditorView: View {
                 .foregroundColor(Color.mosaicSubtle)
                 .textCase(.uppercase)
 
-            if let recipientEmail {
-                Label(recipientEmail, systemImage: "envelope.fill")
-                    .font(MosaicFont.medium(15))
-                    .foregroundColor(Color.mosaicInk)
+            if isResolvingRecipient {
+                Label("Finding a verified contact…", systemImage: "magnifyingglass")
+                    .font(MosaicFont.regular(14))
+                    .foregroundColor(Color.mosaicSubtle)
+            } else if let recipientContact {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(recipientContact.email, systemImage: "envelope.fill")
+                        .font(MosaicFont.medium(15))
+                        .foregroundColor(Color.mosaicInk)
+                    Text(recipientContact.sourceLabel)
+                        .font(MosaicFont.regular(12))
+                        .foregroundColor(Color.mosaicSubtle)
+
+                    if let sourceURL = URL(string: recipientContact.sourceURL), !recipientContact.sourceURL.isEmpty {
+                        Link("View contact source", destination: sourceURL)
+                            .font(MosaicFont.medium(12))
+                            .foregroundColor(Color.mosaicViolet)
+                    }
+                }
+            } else if appState.isDemoMode {
+                Label("Demo recipient · demo@mosaic.invalid", systemImage: "testtube.2")
+                    .font(MosaicFont.regular(14))
+                    .foregroundColor(Color.mosaicSubtle)
+                Text("Demo only — no message is sent automatically.")
+                    .font(MosaicFont.regular(12))
+                    .foregroundColor(Color.mosaicMuted)
             } else {
-                Label("No verified email found in this report", systemImage: "exclamationmark.triangle")
+                Label("No verified contact found yet", systemImage: "exclamationmark.triangle")
                     .font(MosaicFont.regular(14))
                     .foregroundColor(Color.mosaicSubtle)
 
@@ -136,15 +169,52 @@ struct DraftEditorView: View {
         .padding(.top, 10)
     }
 
-    private var recipientEmail: String? {
-        let userAddresses = Set([
+    private var reviewAcknowledgement: some View {
+        Button {
+            hasReviewed.toggle()
+            document.reviewedByUserAt = hasReviewed ? Date() : nil
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: hasReviewed ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(hasReviewed ? Color.mosaicViolet : Color.mosaicMuted)
+                Text("I reviewed the letter and recipient")
+                    .font(MosaicFont.medium(13))
+                    .foregroundColor(Color.mosaicInk)
+                Spacer(minLength: 0)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+        .accessibilityValue(hasReviewed ? "Checked" : "Not checked")
+    }
+
+    private func resolveRecipientContact() async {
+        isResolvingRecipient = true
+        defer { isResolvingRecipient = false }
+
+        let userEmails = Set([
             appState.userEmail,
             appState.letterProfile.email
         ].compactMap { $0?.lowercased() })
+        recipientContact = await TigerDataService.shared.resolveRecipient(
+            issuerName: documentChange?.issuerName ?? appState.currentSnapshot?.accounts.first(where: { $0.accountLast4 == documentAccountLast4 })?.issuerName,
+            reportEmailCandidates: appState.reportEmailCandidates,
+            excludedEmails: userEmails
+        )
+    }
 
-        return appState.reportEmailCandidates.first {
-            !userAddresses.contains($0.lowercased())
-        }
+    private var documentChange: ChangeItem? {
+        guard let packet = appState.recoveryPackets.first(where: { packet in
+            packet.documents.contains(where: { $0.id == document.id })
+        }) else { return nil }
+        return appState.changeItems.first { $0.id == packet.changeItemId }
+    }
+
+    private var documentAccountLast4: String? {
+        appState.recoveryPackets
+            .first(where: { $0.documents.contains(where: { $0.id == document.id }) })?
+            .itemLast4
     }
 
     private var officialDestination: (title: String, url: URL)? {
@@ -154,50 +224,87 @@ struct DraftEditorView: View {
 
     @ViewBuilder
     private var renderedLetter: some View {
-        if let formatted = try? AttributedString(
-            markdown: letterMarkdown(from: document.draftText),
-            options: .init(interpretedSyntax: .full)
-        ) {
-            Text(formatted)
-                .font(MosaicFont.regular(16))
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(letterLines.enumerated()), id: \.offset) { _, line in
+                renderedLine(line)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.mosaicLine, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var letterLines: [String] {
+        document.draftText.components(separatedBy: .newlines)
+    }
+
+    @ViewBuilder
+    private func renderedLine(_ line: String) -> some View {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            Spacer().frame(height: 9)
+        } else if line.uppercased().hasPrefix("TOPIC:") {
+            Text(value(after: "TOPIC:", in: line))
+                .font(MosaicFont.medium(22))
                 .foregroundColor(Color.mosaicInk)
-                .lineSpacing(6)
+                .padding(.bottom, 10)
+        } else if line.uppercased().hasPrefix("ISSUE:") {
+            Text(value(after: "ISSUE:", in: line))
+                .font(MosaicFont.medium(15))
+                .foregroundColor(Color.mosaicViolet)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 8)
+        } else if line.uppercased().hasPrefix("NOTICE:") {
+            Text("Notice: \(value(after: "NOTICE:", in: line))")
+                .font(MosaicFont.regular(12))
+                .foregroundColor(Color.mosaicSubtle)
+                .lineSpacing(3)
+                .padding(12)
+                .background(Color.mosaicWarmBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.top, 8)
+        } else if line.hasPrefix("- ") || line.hasPrefix("• ") {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 5))
+                    .padding(.top, 8)
+                Text(String(line.dropFirst(2)))
+                    .font(MosaicFont.regular(16))
+                    .foregroundColor(Color.mosaicInk)
+                    .lineSpacing(4)
+            }
+        } else if ["DATE:", "TO:", "FROM:", "SUBJECT:"].contains(where: { line.uppercased().hasPrefix($0) }) {
+            Text(line)
+                .font(MosaicFont.regular(13))
+                .foregroundColor(Color.mosaicSubtle)
+                .fixedSize(horizontal: false, vertical: true)
         } else {
-            Text(document.draftText)
+            Text(line.replacingOccurrences(of: "**", with: ""))
                 .font(MosaicFont.regular(16))
                 .foregroundColor(Color.mosaicInk)
-                .lineSpacing(6)
+                .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func letterMarkdown(from text: String) -> String {
-        text.components(separatedBy: .newlines).map { line in
-            if line.hasPrefix("TOPIC:") {
-                return "# \(line.dropFirst(6).trimmingCharacters(in: .whitespaces))"
-            }
-            if line.hasPrefix("ISSUE:") {
-                return "**Reason:** \(line.dropFirst(6).trimmingCharacters(in: .whitespaces))"
-            }
-            if line.hasPrefix("SUBJECT:") {
-                return "**Subject:** \(line.dropFirst(8).trimmingCharacters(in: .whitespaces))"
-            }
-            if line.hasPrefix("NOTICE:") {
-                return "> **Notice:** \(line.dropFirst(7).trimmingCharacters(in: .whitespaces))"
-            }
-            for label in ["DATE:", "TO:", "FROM:"] where line.uppercased().hasPrefix(label) {
-                return "**\(label.dropLast()):**\(line.dropFirst(label.count))"
-            }
-            return line
-        }
-        .joined(separator: "\n")
+    private func value(after prefix: String, in line: String) -> String {
+        String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func openInDefaultMail() {
-        guard let trimmedRecipient = recipientEmail else {
+        guard hasReviewed else {
+            mailMessage = "Check the review box after confirming the letter and recipient."
+            showMailUnavailable = true
+            return
+        }
+        let trimmedRecipient = recipientContact?.email ?? (appState.isDemoMode ? "demo@mosaic.invalid" : nil)
+        guard let trimmedRecipient else {
             mailMessage = "Mosaic could not find a verified recipient email in this report. Use the official dispute instructions instead of sending to an unverified address."
             showMailUnavailable = true
             return

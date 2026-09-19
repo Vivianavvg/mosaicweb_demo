@@ -12,7 +12,7 @@ struct LearnView: View {
                             .font(MosaicFont.medium(30))
                             .foregroundColor(Color.mosaicInk)
 
-                        Text("Plain-language guidance for understanding a report, protecting your file, and choosing a next step.")
+                        Text("Clear guidance for understanding your report and choosing your next step.")
                             .font(MosaicFont.regular(15))
                             .foregroundColor(Color.mosaicSubtle)
                             .fixedSize(horizontal: false, vertical: true)
@@ -22,90 +22,35 @@ struct LearnView: View {
                         Divider().overlay(Color.mosaicLine)
 
                         LearnRow(
-                            title: "Credit basics",
-                            sourceCitation: "Consumer Financial Protection Bureau",
-                            summary: "A credit report is a record of reported accounts and inquiries. A score is a separate calculation that may use the report to estimate repayment risk.",
+                            title: "Understand your report",
+                            summary: "A report lists accounts, balances, payment history, inquiries, and addresses. A score is a separate calculation.",
                             bullets: [
                                 "Check names, accounts, balances, and payment history.",
-                                "Review all three bureaus because their files can differ.",
-                                "Look for changes first; a change is not automatically an error."
+                                "Compare all three bureaus; their files can differ.",
+                                "A change is a reason to check, not proof of an error."
                             ],
                             linkTitle: "Read CFPB credit basics",
                             urlString: "https://www.consumerfinance.gov/consumer-tools/credit-reports-and-scores/"
                         )
 
                         LearnRow(
-                            title: "Budgeting with variable income",
-                            sourceCitation: "Consumer Financial Protection Bureau",
-                            summary: "When income changes month to month, build a plan around your reliable minimum and assign extra income deliberately.",
+                            title: "Build financial breathing room",
+                            summary: "A simple spending plan and small emergency fund can make unexpected costs easier to handle.",
                             bullets: [
-                                "List essential bills before flexible spending.",
-                                "Keep a small buffer for low-income months.",
-                                "Review the plan whenever income or due dates change."
+                                "Plan essential bills before flexible spending.",
+                                "Start with a buffer you can maintain consistently.",
+                                "Rebuild savings after using them for a real emergency."
                             ],
                             linkTitle: "Explore CFPB budgeting tools",
                             urlString: "https://www.consumerfinance.gov/consumer-tools/budgeting/"
                         )
 
                         LearnRow(
-                            title: "Emergency funds",
-                            sourceCitation: "Consumer Financial Protection Bureau",
-                            summary: "A dedicated cash reserve can keep an unexpected bill from becoming high-cost debt. Start with an amount you can maintain consistently.",
-                            bullets: [
-                                "Choose a small first target, then build gradually.",
-                                "Keep it accessible and separate from everyday spending.",
-                                "Replenish it after using it for a real emergency."
-                            ],
-                            linkTitle: "Read about emergency savings",
-                            urlString: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/"
-                        )
-
-                        LearnRow(
-                            title: "Beginner investing",
-                            sourceCitation: "Investor.gov · SEC",
-                            summary: "Investing carries risk. Learn about goals, time horizon, fees, and diversification before choosing an account or investment.",
-                            bullets: [
-                                "Pay attention to fees and avoid promises of guaranteed returns.",
-                                "Diversification can reduce the impact of one investment falling.",
-                                "Use regulated sources and ask for qualified advice when needed."
-                            ],
-                            linkTitle: "Start with Investor.gov",
-                            urlString: "https://www.investor.gov/introduction-investing"
-                        )
-
-                        LearnRow(
-                            title: "Coerced debt protections",
-                            sourceCitation: "CFPB · state protections",
-                            summary: "If an account was opened under threat, force, fraud, or pressure, learn which records can support a factual dispute.",
-                            bullets: [
-                                "Write down what happened in your own words.",
-                                "Keep the report page and supporting records together.",
-                                "Review Mosaic’s draft before sending anything."
-                            ],
-                            linkTitle: "NNEDV financial abuse guide",
-                            urlString: "https://nnedv.org/content/about-financial-abuse/"
-                        )
-
-                        LearnRow(
-                            title: "Joint accounts and authorized users",
-                            sourceCitation: "Consumer Financial Protection Bureau",
-                            summary: "Understand the difference between being an authorized user and being responsible for a joint account.",
-                            bullets: [
-                                "Ask the issuer how your name is listed.",
-                                "Authorized-user removal may not erase prior history.",
-                                "Compare the account details with your records."
-                            ],
-                            linkTitle: "Read the CFPB guide",
-                            urlString: "https://www.consumerfinance.gov/ask-cfpb/am-i-responsible-for-debt-on-a-credit-card-account-if-i-am-only-an-authorized-user-en-1367/"
-                        )
-
-                        LearnRow(
-                            title: "Credit freezes are free",
-                            sourceCitation: "Federal Trade Commission",
-                            summary: "A freeze can help stop new creditors from opening accounts using your information while you review what happened.",
+                            title: "Protect your file",
+                            summary: "A credit freeze can help stop new accounts from being opened while you review what changed.",
                             bullets: [
                                 "Place a freeze separately with each bureau.",
-                                "Placing and lifting a freeze is free.",
+                                "Freezes are free to place and lift.",
                                 "A freeze does not change your existing score."
                             ],
                             linkTitle: "Open the FTC guide",
@@ -113,29 +58,41 @@ struct LearnView: View {
                         )
 
                         LearnRow(
-                            title: "Dispute review basics",
-                            sourceCitation: "FCRA § 611 · CFPB",
-                            summary: "Learn what to collect before disputing an item and why keeping copies of everything matters.",
+                            title: "Dispute an error",
+                            summary: "Collect the report page and your records before asking a bureau or furnisher to investigate.",
                             bullets: [
-                                "Send copies, not original documents.",
-                                "Keep a dated record of what you sent.",
-                                "Use tracking when mailing important documents."
+                                "Describe the exact item and why it is wrong.",
+                                "Send copies and keep the originals.",
+                                "Keep a dated copy of everything you send."
                             ],
                             linkTitle: "Read CFPB dispute instructions",
                             urlString: "https://www.consumerfinance.gov/ask-cfpb/how-do-i-dispute-an-error-on-my-credit-report-en-314/"
                         )
 
                         LearnRow(
-                            title: "Confidential help",
-                            sourceCitation: "NDVH · NFCC",
-                            summary: "Free nonprofit counselors and confidential hotlines can help you make a plan without selling you credit-repair services.",
+                            title: "Joint or authorized user",
+                            summary: "These labels are different. A joint account can create shared responsibility; an authorized user may not be responsible for the debt.",
                             bullets: [
-                                "Call 1-800-799-7233 or text START to 88788.",
-                                "NFCC offers nonprofit budget and debt guidance.",
-                                "Legal aid may help with complex cases."
+                                "Ask the issuer how your name is listed.",
+                                "Removal may not erase prior history.",
+                                "Compare the account details with your records."
                             ],
-                            linkTitle: "Find an NFCC counselor",
-                            urlString: "https://www.nfcc.org/"
+                            linkTitle: "Read the CFPB guide",
+                            urlString: "https://www.consumerfinance.gov/ask-cfpb/am-i-responsible-for-debt-on-a-credit-card-account-if-i-am-only-an-authorized-user-en-1367/"
+                        )
+
+                        LearnRow(
+                            title: "Get confidential support",
+                            summary: "You can get help making a plan without handing your money to a credit-repair company.",
+                            bullets: [
+                                "Keep a record of what happened in your own words.",
+                                "Use nonprofit counselors or legal aid when appropriate.",
+                                "Review every Mosaic draft before sending it.",
+                                "The National Domestic Violence Hotline is available 24/7.",
+                                "NFCC offers nonprofit budget and debt guidance."
+                            ],
+                            linkTitle: "Find confidential support",
+                            urlString: "https://nnedv.org/content/about-financial-abuse/"
                         )
                     }
                     .padding(.horizontal, 20)
@@ -150,7 +107,6 @@ struct LearnView: View {
 
 private struct LearnRow: View {
     let title: String
-    let sourceCitation: String
     let summary: String
     let bullets: [String]
     let linkTitle: String
@@ -162,24 +118,19 @@ private struct LearnRow: View {
                 .font(MosaicFont.medium(18))
                 .foregroundColor(Color.mosaicInk)
 
-            Text(sourceCitation.uppercased())
-                .font(MosaicFont.medium(10))
-                .tracking(0.6)
-                .foregroundColor(Color.mosaicMuted)
-
             Text(summary)
-                .font(MosaicFont.regular(14))
+                .font(MosaicFont.regular(15))
                 .foregroundColor(Color.mosaicSubtle)
                 .lineSpacing(3)
 
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(bullets, id: \.self) { bullet in
                     HStack(alignment: .top, spacing: 9) {
                         Text("•")
-                            .font(MosaicFont.medium(14))
+                            .font(MosaicFont.medium(13))
                             .foregroundColor(Color.mosaicViolet)
                         Text(bullet)
-                            .font(MosaicFont.regular(13))
+                            .font(MosaicFont.regular(14))
                             .foregroundColor(Color.mosaicInk)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -190,7 +141,7 @@ private struct LearnRow: View {
                 Link(destination: url) {
                     HStack {
                         Text(linkTitle)
-                            .font(MosaicFont.medium(12))
+                            .font(MosaicFont.medium(13))
                             .foregroundColor(Color.mosaicViolet)
                         Spacer()
                         Image(systemName: "arrow.up.right")
@@ -200,7 +151,7 @@ private struct LearnRow: View {
                 }
             }
         }
-        .padding(.vertical, 20)
+        .padding(.vertical, 18)
         .overlay(alignment: .bottom) {
             Divider().overlay(Color.mosaicLine)
         }

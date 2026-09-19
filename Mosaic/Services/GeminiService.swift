@@ -107,7 +107,11 @@ public final class GeminiService {
             )
         }
 
-        return deterministicAgentTurn(for: safeMessage, changeCount: changeItems.count, openTaskCount: openTaskCount)
+        return deterministicAgentTurn(
+            for: safeMessage,
+            changeItems: changeItems,
+            openTaskCount: openTaskCount
+        )
     }
 
     private func suggestions(for message: String) -> [AgentSuggestion] {
@@ -131,18 +135,52 @@ public final class GeminiService {
         ]
     }
 
-    private func deterministicAgentTurn(for message: String, changeCount: Int, openTaskCount: Int) -> AgentTurn {
+    private func deterministicAgentTurn(
+        for message: String,
+        changeItems: [ChangeItem],
+        openTaskCount: Int
+    ) -> AgentTurn {
         let lowercased = message.lowercased()
+        let pendingItems = changeItems.filter { $0.classification == nil }
+        let focusItem = pendingItems.max { lhs, rhs in
+            severityRank(lhs.severity) < severityRank(rhs.severity)
+        } ?? changeItems.first
+        let changeCount = changeItems.count
         let reply: String
 
-        if lowercased.contains("next") || lowercased.contains("do") {
-            reply = "Start with the highest-priority report change, then review the source page before creating any draft. You have \(changeCount) change\(changeCount == 1 ? "" : "s") and \(openTaskCount) open follow-up task\(openTaskCount == 1 ? "" : "s") in Mosaic."
-        } else if lowercased.contains("learn") || lowercased.contains("explain") {
-            reply = "Mosaic can explain the report language and the available review steps in plain language. Open Learn for sourced guidance, then return here when you are ready to act."
+        if let focusItem,
+           lowercased.contains("biggest") ||
+           lowercased.contains("what changed") ||
+           lowercased.contains("explain") {
+            let issuer = RedactionEngine.shared.redactText(
+                focusItem.issuerName ?? focusItem.changeType.displayName
+            )
+            let detail = RedactionEngine.shared.redactText(
+                focusItem.deltaSummary ?? focusItem.summary
+            )
+            let page = focusItem.sourcePages.first.map(String.init) ?? "the report"
+            reply = "The most important change to review is " + issuer + ": " + detail + ". It appears on page " + page + ". Compare that page with your records, then choose Recognize, Don't recognize, or Not sure."
+        } else if lowercased.contains("review") || lowercased.contains("matter") {
+            if let focusItem {
+                let issuer = RedactionEngine.shared.redactText(
+                    focusItem.issuerName ?? focusItem.changeType.displayName
+                )
+                reply = "Start with " + issuer + ". Check its source page and decide whether the entry is yours before creating any draft."
+            } else {
+                reply = "Import a credit report first. Mosaic will turn its changes into a short review list."
+            }
+        } else if lowercased.contains("upload") || (lowercased.contains("report") && changeItems.isEmpty) {
+            reply = "Tap Add a credit report and choose a PDF. Mosaic reads it on-device, then shows the changes to review."
+        } else if lowercased.contains("next") || lowercased.contains("do") {
+            let changeWord = changeCount == 1 ? "change" : "changes"
+            let taskWord = openTaskCount == 1 ? "task" : "tasks"
+            reply = "Start with the highest-priority report change, then review the source page before creating any draft. You have " + String(changeCount) + " " + changeWord + " and " + String(openTaskCount) + " open follow-up " + taskWord + " in Mosaic."
+        } else if lowercased.contains("learn") {
+            reply = "Open Learn for sourced explanations, then return to Review when you are ready to decide what the report entry means."
         } else if lowercased.contains("letter") || lowercased.contains("dispute") {
-            reply = "I can take you to Letters where Mosaic prepares a draft for your review. Confirm every fact and keep proof of anything you send."
+            reply = "I can prepare a reviewable draft in Letters. Confirm the facts and recipient before opening it in Mail."
         } else {
-            reply = "I can help you understand what changed, choose a next step, or explain the recovery options. Start by reviewing the report changes so the advice stays tied to evidence."
+            reply = "I can explain a report change, help you choose what to review, or prepare a draft after you confirm the facts."
         }
 
         return AgentTurn(
@@ -150,6 +188,14 @@ public final class GeminiService {
             reply: reply,
             suggestions: suggestions(for: message)
         )
+    }
+
+    private func severityRank(_ severity: ChangeSeverity) -> Int {
+        switch severity {
+        case .urgentReview: return 3
+        case .review: return 2
+        case .informational: return 1
+        }
     }
 
     public func generateDraft(

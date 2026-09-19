@@ -67,6 +67,13 @@ struct OverviewView: View {
                     .padding(.bottom, 28)
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // The composer lives outside this scroll view, so tapping any
+                // content area dismisses the keyboard without stealing focus
+                // when the user taps the message field itself.
+                isPromptFocused = false
+            }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             composer
@@ -271,7 +278,7 @@ struct OverviewView: View {
                 )
                 reviewChoice(
                     title: "I don't recognize it",
-                    subtitle: "Prepare a reviewable draft",
+                    subtitle: "Create an email draft · pending approval",
                     icon: "exclamationmark.triangle.fill",
                     tint: Color.mosaicViolet,
                     classification: .unrecognized,
@@ -532,9 +539,11 @@ struct OverviewView: View {
                 let alreadyPrepared = appState.recoveryPackets.contains { $0.changeItemId == target.id }
                 await appState.createRecoveryPacket(for: target, classification: classification)
                 let itemName = target.issuerName ?? target.changeType.displayName
+                let preparedPacket = appState.recoveryPackets.first { $0.changeItemId == target.id }
                 assistantReply = alreadyPrepared
                     ? "You already have a reviewable draft for \(itemName). I opened Letters so you can continue editing it."
                     : "I prepared a reviewable email draft for \(itemName). Check every fact before sending."
+                appState.requestedRecoveryPacketID = preparedPacket?.id
                 appState.requestedTabIndex = 1
                 isAgentProcessing = false
                 return

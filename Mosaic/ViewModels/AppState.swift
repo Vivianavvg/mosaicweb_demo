@@ -210,12 +210,9 @@ public final class AppState: ObservableObject {
         let diffChanges = ReportDiffEngine.shared.diff(current: current, prior: prior)
         self.changeItems = diffChanges
 
-        // Seed a sample recovery packet and deadline tasks for the demo
-        seedDefaultPacketAndTasks(for: diffChanges, snapshotId: current.id)
-
-        // Replace the seeded preview letters with Gemini drafts when the key is available.
-        // The deterministic copy remains visible immediately while these drafts load.
-        Task { await refreshDemoLettersWithGemini() }
+        // Keep Letters empty until the user makes a decision in the Review deck.
+        // A classification is the explicit trigger that creates a reviewable draft.
+        resetGeneratedWorkflows()
 
         self.analytics = TigerDataService.shared.fetchSummary()
         isAnalyzing = false
@@ -223,128 +220,9 @@ public final class AppState: ObservableObject {
         scheduleCloudSync()
     }
 
-    private func seedDefaultPacketAndTasks(for changes: [ChangeItem], snapshotId: UUID) {
+    private func resetGeneratedWorkflows() {
         recoveryPackets.removeAll()
         tasks.removeAll()
-
-        // Demo-only packet set: each item is still unclassified in Review, but
-        // Letters shows several neutral, clearly synthetic draft scenarios.
-        let preferredScenarios: [(ChangeType, UserClassification)] = [
-            (.collectionOrChargeoffChange, .unrecognized),
-            (.jointOrAuthorizedUserChange, .jointOrShared),
-            (.balanceIncrease, .notSure),
-            (.newInquiry, .someoneElseOpened),
-            (.newAddress, .pressuredOrNotFreelyAgreed)
-        ]
-
-        let selectedChanges: [(ChangeItem, UserClassification)] = preferredScenarios.compactMap { type, classification in
-            guard let change = changes.first(where: { $0.changeType == type }) else { return nil }
-            return (change, classification)
-        }
-
-        let fallbackChanges = changes
-            .filter { change in !selectedChanges.contains(where: { $0.0.id == change.id }) }
-            .prefix(max(0, 5 - selectedChanges.count))
-            .map { ($0, UserClassification.notSure) }
-
-        let demoCases = Array((selectedChanges + fallbackChanges).prefix(5))
-        let calendar = Calendar.current
-        let now = Date()
-
-        for (index, scenario) in demoCases.enumerated() {
-            let change = scenario.0
-            let classification = scenario.1
-            var packet = RecoveryPacket(
-                changeItemId: change.id,
-                classificationAtCreation: classification,
-                status: .readyForReview,
-                itemName: change.issuerName ?? demoItemName(for: change),
-                itemLast4: change.relatedAccountLast4,
-                sourcePage: change.sourcePages.first ?? 1
-            )
-
-            for documentType in PacketDocumentType.allCases {
-                let text = GeminiService.shared.generateDeterministicDraft(
-                    item: change,
-                    classification: classification,
-                    documentType: documentType,
-                    profile: letterProfile
-                )
-                packet.documents.append(PacketDocument(
-                    packetId: packet.id,
-                    documentType: documentType,
-                    draftText: text
-                ))
-            }
-
-            recoveryPackets.append(packet)
-
-            let recipient: RecipientType = index == 0 ? .bureau : (index.isMultiple(of: 2) ? .furnisher : .bureau)
-            let dueAt = calendar.date(byAdding: .day, value: 3 + (index * 4), to: now)
-            tasks.append(TaskItem(
-                packetId: packet.id,
-                title: "Review (demoItemName(for: change)) draft",
-                recipientType: recipient,
-                dueAt: dueAt,
-                sentDate: nil,
-                status: .draft,
-                notes: "Synthetic demo case only. Nothing has been sent. Mosaic does not submit disputes for you.",
-                ruleVersion: index == 0 ? "FCRA § 611 (15 U.S.C. § 1681i)" : "Demo review guidance"
-            ))
-        }
-
-        if let firstPacket = recoveryPackets.first {
-            tasks.append(TaskItem(
-                packetId: firstPacket.id,
-                title: "Review FTC IdentityTheft.gov options",
-                recipientType: .ftc,
-                dueAt: calendar.date(byAdding: .day, value: 3, to: now),
-                sentDate: nil,
-                status: .draft,
-                notes: "Synthetic demo case only. Mosaic does not file reports for you.",
-                ruleVersion: "FTC Identity Theft Guidelines"
-            ))
-
-            tasks.append(TaskItem(
-                packetId: firstPacket.id,
-                title: "Confirm bureau security freezes",
-                recipientType: .security,
-                dueAt: calendar.date(byAdding: .day, value: 5, to: now),
-                sentDate: nil,
-                status: .draft,
-                notes: "Synthetic demo case only. Review freeze status yourself.",
-                ruleVersion: "Economic Growth, Regulatory Relief, and Consumer Protection Act"
-            ))
-        }
-    }
-
-    private func refreshDemoLettersWithGemini() async {
-        let packetIDs = recoveryPackets.map(\ .id)
-
-        for packetID in packetIDs {
-            guard let packetIndex = recoveryPackets.firstIndex(where: { $0.id == packetID }),
-                  let item = changeItems.first(where: { $0.id == recoveryPackets[packetIndex].changeItemId }),
-                  let documentIndex = recoveryPackets[packetIndex].documents.firstIndex(where: { $0.documentType == .bureauDispute }) else {
-                continue
-            }
-
-            let classification = recoveryPackets[packetIndex].classificationAtCreation
-            let draft = await GeminiService.shared.generateDraft(
-                item: item,
-                classification: classification,
-                documentType: .bureauDispute,
-                profile: letterProfile
-            )
-
-            guard let updatedPacketIndex = recoveryPackets.firstIndex(where: { $0.id == packetID }),
-                  let updatedDocumentIndex = recoveryPackets[updatedPacketIndex].documents.firstIndex(where: { $0.documentType == .bureauDispute }) else {
-                continue
-            }
-            recoveryPackets[updatedPacketIndex].documents[updatedDocumentIndex].draftText = draft
-            recoveryPackets[updatedPacketIndex].documents[updatedDocumentIndex].generatedBy = "gemini-3.6-flash"
-        }
-
-        scheduleCloudSync()
     }
 
     private func demoItemName(for change: ChangeItem) -> String {
@@ -390,11 +268,34 @@ public final class AppState: ObservableObject {
                 savedItems.insert(item, at: 0)
             }
             reviewFeedback = "Saved for your records. You can revisit the classification in Review."
-        case .unrecognized, .someoneElseOpened, .pressuredOrNotFreelyAgreed:
+        case .unrecognized:
             if !recoveryPackets.contains(where: { $0.changeItemId == item.id }) {
-                Task { await createRecoveryPacket(for: item) }
+                Task { @MainActor in
+                    await createRecoveryPacket(for: item, classification: .unrecognized)
+                    guard let packet = recoveryPackets.first(where: { $0.changeItemId == item.id }) else { return }
+                    requestedRecoveryPacketID = packet.id
+                    requestedTabIndex = 1
+                    reviewFeedback = "Email draft created. It is pending your approval in Letters."
+                }
+            } else if let packet = recoveryPackets.first(where: { $0.changeItemId == item.id }) {
+                requestedRecoveryPacketID = packet.id
+                requestedTabIndex = 1
+                reviewFeedback = "Email draft ready. It is pending your approval in Letters."
             }
-            reviewFeedback = "A reviewable draft can help you ask the bureau or creditor to investigate."
+        case .someoneElseOpened, .pressuredOrNotFreelyAgreed:
+            if !recoveryPackets.contains(where: { $0.changeItemId == item.id }) {
+                Task { @MainActor in
+                    await createRecoveryPacket(for: item)
+                    guard let packet = recoveryPackets.first(where: { $0.changeItemId == item.id }) else { return }
+                    requestedRecoveryPacketID = packet.id
+                    requestedTabIndex = 1
+                    reviewFeedback = "Email draft created. It is pending your approval in Letters."
+                }
+            } else if let packet = recoveryPackets.first(where: { $0.changeItemId == item.id }) {
+                requestedRecoveryPacketID = packet.id
+                requestedTabIndex = 1
+                reviewFeedback = "Email draft ready. It is pending your approval in Letters."
+            }
         case .notSure:
             let already = tasks.contains {
                 $0.title.contains(item.issuerName ?? item.summary) && !$0.isCompleted

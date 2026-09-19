@@ -46,6 +46,64 @@ public final class TigerDataService {
         return cachedSummary
     }
 
+    /// Resolves a safe recipient route for a draft. An address printed in the
+    /// user's report wins; otherwise the optional Tiger Data directory is used.
+    /// The directory only returns contacts marked verified by an official source.
+    public func resolveRecipient(
+        issuerName: String?,
+        reportEmailCandidates: [String],
+        excludedEmails: Set<String> = []
+    ) async -> RecipientContact? {
+        if let reportEmail = reportEmailCandidates.first(where: { candidate in
+            !excludedEmails.contains(candidate.lowercased()) && candidate.contains("@")
+        }) {
+            return RecipientContact(
+                issuerName: issuerName ?? "Report contact",
+                email: reportEmail,
+                sourceURL: "",
+                sourceLabel: "Found in your credit report"
+            )
+        }
+
+        guard let issuerName,
+              !issuerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !SecretsConfig.shared.mosaicAPIBaseURL.isEmpty else {
+            return nil
+        }
+
+        var components = URLComponents(
+            string: "\(SecretsConfig.shared.mosaicAPIBaseURL)/v1/recipient-contacts/resolve"
+        )
+        components?.queryItems = [URLQueryItem(name: "issuerName", value: issuerName)]
+        guard let url = components?.url else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 8
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                return nil
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let contact = try decoder.decode(RecipientContact.self, from: data)
+            guard contact.isVerified,
+                  !excludedEmails.contains(contact.email.lowercased()) else {
+                return nil
+            }
+            return contact
+        } catch {
+            // The app remains usable when the optional directory is offline.
+            print("Tiger Data recipient directory unavailable: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     /// Records a task status update (triggers live time-series recalculation)
     public func recordTaskStatusChange(task: TaskItem, previousStatus: TaskStatus) {
         if task.isCompleted && !previousStatus.isCompleted {
