@@ -1,59 +1,17 @@
 import SwiftUI
 
-/// Native SwiftUI translation of the pink-salt treatment using Mosaic's palette.
+/// Shared warm off-white canvas for Mosaic pages.
 struct MosaicPaletteBackground: View {
     var opacity: Double = 0.3
 
     var body: some View {
         ZStack {
-            Color.white
+            Color.mosaicWarmBackground
 
-            LinearGradient(
-                colors: Color.mosaicHomeGradientColors.map { $0.opacity(opacity) },
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            MosaicSaltBands(opacity: opacity > 0.7 ? 0.22 : 0.06)
-
-            // Keep the texture subtle, but visible enough to preserve the pink-salt reference.
-            MosaicGrainOverlay(opacity: opacity > 0.7 ? 0.035 : 0.018)
+            // Keep a barely visible native grain while removing the former gradient entirely.
+            MosaicGrainOverlay(opacity: opacity > 0.7 ? 0.012 : 0.006)
         }
         .ignoresSafeArea()
-    }
-}
-
-/// Soft vertical columns inspired by the pink-salt reference, kept native and palette-aware.
-private struct MosaicSaltBands: View {
-    let opacity: Double
-
-    private let heights: [CGFloat] = [
-        0.18, 0.32, 0.48, 0.64, 0.80, 0.94, 0.80, 0.64, 0.48, 0.32, 0.18
-    ]
-
-    var body: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 0) {
-                ForEach(Array(heights.enumerated()), id: \.offset) { _, height in
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(opacity * 0.25),
-                                    Color.mosaicPurple.opacity(opacity * 0.75),
-                                    Color.mosaicPurple.opacity(opacity * 0.35)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: proxy.size.width / CGFloat(heights.count), height: proxy.size.height * height)
-                        .blur(radius: 12)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        }
-        .allowsHitTesting(false)
     }
 }
 

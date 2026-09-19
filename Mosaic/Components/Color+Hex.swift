@@ -61,6 +61,7 @@ extension Color {
     public static let mosaicLilac = Color(hex: "C8B6FF")
     public static let mosaicPeriwinkle = Color(hex: "B8C0FF")
     public static let mosaicSky = Color(hex: "BBD0FF")
+    public static let mosaicWarmBackground = Color(hex: "F8F5F1")
     public static let mosaicHomeGradientColors: [Color] = [
         mosaicBlush,
         mosaicLavender,
