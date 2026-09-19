@@ -40,6 +40,8 @@ public final class AppState: ObservableObject {
     // UI Loading States
     @Published public var isAnalyzing: Bool = false
     @Published public var statusMessage: String? = nil
+    /// Tab index requested by a workflow action, such as Ask Mosaic creating a draft.
+    @Published public var requestedTabIndex: Int? = nil
 
     @Published public var letterProfile = LetterUserProfile()
 
@@ -333,12 +335,13 @@ public final class AppState: ObservableObject {
     }
 
     /// Creates a source-linked recovery packet for an item
-    public func createRecoveryPacket(for item: ChangeItem) async {
+    public func createRecoveryPacket(for item: ChangeItem, classification overrideClassification: UserClassification? = nil) async {
         guard !undoneReviewItemIDs.contains(item.id) else { return }
+        guard !recoveryPackets.contains(where: { $0.changeItemId == item.id }) else { return }
         isAnalyzing = true
         statusMessage = "Generating neutral dispute and recovery drafts..."
 
-        let classification = item.classification ?? .unrecognized
+        let classification = overrideClassification ?? item.classification ?? .unrecognized
         var packet = RecoveryPacket(
             changeItemId: item.id,
             classificationAtCreation: classification,

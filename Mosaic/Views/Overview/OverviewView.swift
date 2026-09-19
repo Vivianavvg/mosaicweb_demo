@@ -521,6 +521,25 @@ struct OverviewView: View {
         isAgentProcessing = true
 
         Task { @MainActor in
+            if isDraftRequest(value) {
+                guard let target = draftTarget(for: value) else {
+                    assistantReply = "Import a credit report first, then ask me to draft an email about a specific change."
+                    isAgentProcessing = false
+                    return
+                }
+
+                let classification = draftClassification(for: value)
+                let alreadyPrepared = appState.recoveryPackets.contains { $0.changeItemId == target.id }
+                await appState.createRecoveryPacket(for: target, classification: classification)
+                let itemName = target.issuerName ?? target.changeType.displayName
+                assistantReply = alreadyPrepared
+                    ? "You already have a reviewable draft for \(itemName). I opened Letters so you can continue editing it."
+                    : "I prepared a reviewable email draft for \(itemName). Check every fact before sending."
+                appState.requestedTabIndex = 1
+                isAgentProcessing = false
+                return
+            }
+
             if let backboardReply = await BackboardService.shared.generateAgentReply(
                 userMessage: value,
                 changeItems: appState.changeItems,
@@ -539,6 +558,46 @@ struct OverviewView: View {
             }
             isAgentProcessing = false
         }
+    }
+
+    private func isDraftRequest(_ value: String) -> Bool {
+        let lowercased = value.lowercased()
+        let draftWords = ["draft", "compose", "write", "email", "e-mail", "mail", "letter"]
+        return draftWords.contains { lowercased.contains($0) }
+    }
+
+    private func draftTarget(for value: String) -> ChangeItem? {
+        let lowercased = value.lowercased()
+        let matchingItem = appState.changeItems.first { item in
+            let searchableText = [item.issuerName, item.summary, item.changeType.displayName]
+                .compactMap { $0?.lowercased() }
+                .joined(separator: " ")
+            let keywords = lowercased.split { !$0.isLetter && !$0.isNumber }
+            return keywords.contains { keyword in
+                keyword.count > 3 && searchableText.contains(keyword)
+            }
+        }
+
+        return matchingItem
+            ?? appState.changeItems.first(where: { $0.classification == nil })
+            ?? appState.changeItems.first
+    }
+
+    private func draftClassification(for value: String) -> UserClassification {
+        let lowercased = value.lowercased()
+        if lowercased.contains("someone else") || lowercased.contains("not mine") || lowercased.contains("didn't open") {
+            return .someoneElseOpened
+        }
+        if lowercased.contains("pressured") || lowercased.contains("without consent") || lowercased.contains("didn't consent") {
+            return .pressuredOrNotFreelyAgreed
+        }
+        if lowercased.contains("joint") || lowercased.contains("shared") {
+            return .jointOrShared
+        }
+        if lowercased.contains("authorized user") {
+            return .authorizedUser
+        }
+        return .unrecognized
     }
 
     private func handleImport(_ result: Result<[URL], Error>) {

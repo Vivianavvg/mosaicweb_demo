@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject private var appState: AppState
     let onLogout: () -> Void
 
     @State private var selectedTab: Int = {
@@ -35,6 +36,11 @@ struct MainTabView: View {
         }
         .tint(Color.mosaicViolet)
         .mosaicSystemTabBar()
+        .onChange(of: appState.requestedTabIndex) { requestedTabIndex in
+            guard let requestedTabIndex else { return }
+            selectedTab = requestedTabIndex
+            appState.requestedTabIndex = nil
+        }
     }
 }
 
