@@ -125,6 +125,10 @@ public final class AppState: ObservableObject {
         // Seed a sample recovery packet and deadline tasks for the demo
         seedDefaultPacketAndTasks(for: diffChanges, snapshotId: current.id)
 
+        // Replace the seeded preview letters with Gemini drafts when the key is available.
+        // The deterministic copy remains visible immediately while these drafts load.
+        Task { await refreshDemoLettersWithGemini() }
+
         self.analytics = TigerDataService.shared.fetchSummary()
         isAnalyzing = false
         statusMessage = nil
@@ -222,6 +226,33 @@ public final class AppState: ObservableObject {
                 notes: "Synthetic demo case only. Review freeze status yourself.",
                 ruleVersion: "Economic Growth, Regulatory Relief, and Consumer Protection Act"
             ))
+        }
+    }
+
+    private func refreshDemoLettersWithGemini() async {
+        let packetIDs = recoveryPackets.map(\ .id)
+
+        for packetID in packetIDs {
+            guard let packetIndex = recoveryPackets.firstIndex(where: { $0.id == packetID }),
+                  let item = changeItems.first(where: { $0.id == recoveryPackets[packetIndex].changeItemId }),
+                  let documentIndex = recoveryPackets[packetIndex].documents.firstIndex(where: { $0.documentType == .bureauDispute }) else {
+                continue
+            }
+
+            let classification = recoveryPackets[packetIndex].classificationAtCreation
+            let draft = await GeminiService.shared.generateDraft(
+                item: item,
+                classification: classification,
+                documentType: .bureauDispute,
+                profile: letterProfile
+            )
+
+            guard let updatedPacketIndex = recoveryPackets.firstIndex(where: { $0.id == packetID }),
+                  let updatedDocumentIndex = recoveryPackets[updatedPacketIndex].documents.firstIndex(where: { $0.documentType == .bureauDispute }) else {
+                continue
+            }
+            recoveryPackets[updatedPacketIndex].documents[updatedDocumentIndex].draftText = draft
+            recoveryPackets[updatedPacketIndex].documents[updatedDocumentIndex].generatedBy = "gemini-3.6-flash"
         }
     }
 
