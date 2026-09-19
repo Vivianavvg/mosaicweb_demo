@@ -147,12 +147,8 @@ struct MosaicPrimaryButton: View {
                     .tracking(0.4)
             }
             .foregroundColor(.white)
-            .padding(.horizontal, 22)
-            .padding(.vertical, 14)
-            .background(Color.mosaicInk)
-            .clipShape(Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.liquidGlass(tint: Color.mosaicViolet, isProminent: true))
     }
 }
 

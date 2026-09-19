@@ -40,7 +40,7 @@ import credit-report PDF (or synthetic fixture)
 ### 1. Auth0 Setup
 - **Domain**: `skmpe.us.auth0.com`
 - **Client ID**: `U7jFSU34Rfu3DJOCIcUzWCWxG08PwgCL`
-- **Bundle Identifier**: `com.hackhers.mosaic`
+- **Bundle Identifier**: `com.hackhers.runway90`
 - **Apple Team ID**: `L22992699P`
 
 **In the Auth0 Management Dashboard** ([manage.auth0.com](https://manage.auth0.com/)):
@@ -49,11 +49,11 @@ Go to **Applications ▸ Applications ▸ [Your App] ▸ Settings** and ensure:
 2. **Token Endpoint Authentication Method**: None
 3. **Allowed Callback URLs**:
    ```text
-   https://skmpe.us.auth0.com/ios/com.hackhers.mosaic/callback, com.hackhers.mosaic://skmpe.us.auth0.com/ios/com.hackhers.mosaic/callback
+   https://skmpe.us.auth0.com/ios/com.hackhers.runway90/callback, com.hackhers.runway90://skmpe.us.auth0.com/ios/com.hackhers.runway90/callback
    ```
 4. **Allowed Logout URLs**:
    ```text
-   https://skmpe.us.auth0.com/ios/com.hackhers.mosaic/callback, com.hackhers.mosaic://skmpe.us.auth0.com/ios/com.hackhers.mosaic/callback
+   https://skmpe.us.auth0.com/ios/com.hackhers.runway90/callback, com.hackhers.runway90://skmpe.us.auth0.com/ios/com.hackhers.runway90/callback
    ```
 
 To reconfigure or update Auth0 keys via CLI:
@@ -61,7 +61,7 @@ To reconfigure or update Auth0 keys via CLI:
 swift Configure.swift \
   --domain skmpe.us.auth0.com \
   --client-id U7jFSU34Rfu3DJOCIcUzWCWxG08PwgCL \
-  --bundle-id com.hackhers.mosaic \
+  --bundle-id com.hackhers.runway90 \
   --team-id L22992699P
 ```
 

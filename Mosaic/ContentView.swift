@@ -7,6 +7,8 @@ struct ContentView: View {
 
     @State private var user: UserInfo?
     @State private var isLoading = true
+    @State private var isAuthenticating = false
+    @State private var authErrorMessage: String?
 
     private static let useUniversalLinks: Bool = {
         guard let path = Bundle.main.path(forResource: "Auth0", ofType: "plist"),
@@ -61,7 +63,8 @@ struct ContentView: View {
             } else {
                 WelcomeView(
                     onLogin: { login() },
-                    onSignup: { login(screenHint: "signup") }
+                    isAuthenticating: isAuthenticating,
+                    authErrorMessage: authErrorMessage
                 )
                 .transition(.opacity)
             }
@@ -96,6 +99,10 @@ struct ContentView: View {
     }
 
     private func login(screenHint: String? = nil) {
+        guard !isAuthenticating else { return }
+        isAuthenticating = true
+        authErrorMessage = nil
+
         var wa = webAuth()
             .scope("openid profile email offline_access")
         if let screenHint {
@@ -104,7 +111,11 @@ struct ContentView: View {
         wa.start { result in
             switch result {
             case .success(let credentials):
-                _ = credentialsManager.store(credentials: credentials)
+                guard credentialsManager.store(credentials: credentials) else {
+                    isAuthenticating = false
+                    authErrorMessage = "Mosaic could not securely save your session. Please try again."
+                    return
+                }
                 self.user = credentialsManager.user
                 if let u = self.user {
                     appState.userEmail = u.email
@@ -114,7 +125,13 @@ struct ContentView: View {
                 appState.isAuthenticated = true
                 appState.loadSyntheticDemo()
             case .failure(let error):
-                print("Auth0 Login failed or cancelled: \(error)")
+                isAuthenticating = false
+                if error.localizedDescription.lowercased().contains("cancel") {
+                    authErrorMessage = "Sign-in was cancelled. Tap the button to try again."
+                } else {
+                    authErrorMessage = "Sign-in did not finish: \(error.localizedDescription)"
+                }
+                print("Auth0 Login failed: \(error)")
             }
         }
     }
@@ -124,6 +141,8 @@ struct ContentView: View {
             .clearSession { result in
                 _ = credentialsManager.clear()
                 self.user = nil
+                self.authErrorMessage = nil
+                self.isAuthenticating = false
                 appState.isAuthenticated = false
                 appState.isDemoMode = false
             }

@@ -25,15 +25,26 @@ public struct LiquidGlassModifier: ViewModifier {
 
     public func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        content
-            .background(glassLayers(in: shape))
-            .clipShape(shape)
-            .shadow(
-                color: Color.black.opacity(shadowRadius > 0 ? 0.07 : 0),
-                radius: shadowRadius,
-                x: 0,
-                y: shadowRadius > 0 ? 8 : 0
-            )
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(tint == .clear ? nil : tint), in: shape)
+                .shadow(
+                    color: Color.black.opacity(shadowRadius > 0 ? 0.07 : 0),
+                    radius: shadowRadius,
+                    x: 0,
+                    y: shadowRadius > 0 ? 8 : 0
+                )
+        } else {
+            content
+                .background(glassLayers(in: shape))
+                .clipShape(shape)
+                .shadow(
+                    color: Color.black.opacity(shadowRadius > 0 ? 0.07 : 0),
+                    radius: shadowRadius,
+                    x: 0,
+                    y: shadowRadius > 0 ? 8 : 0
+                )
+        }
     }
 
     private func glassLayers(in shape: RoundedRectangle) -> some View {
@@ -144,29 +155,47 @@ public struct LiquidGlassButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background {
-                if isProminent {
-                    Capsule(style: .continuous)
-                        .fill(Color.mosaicInk.opacity(configuration.isPressed ? 0.82 : 1))
-                } else {
-                    Capsule(style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay {
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.55))
-                        }
-                        .overlay {
-                            Capsule(style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.7), lineWidth: 0.8)
-                        }
+        if #available(iOS 26.0, *) {
+            configuration.label
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .glassEffect(
+                    .regular
+                        .tint(isProminent ? tint : nil)
+                        .interactive(),
+                    in: Capsule(style: .continuous)
+                )
+                .scaleEffect(configuration.isPressed ? 0.98 : 1)
+                .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        } else {
+            configuration.label
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background {
+                    if isProminent {
+                        Capsule(style: .continuous)
+                            .fill(tint.opacity(configuration.isPressed ? 0.82 : 1))
+                            .overlay {
+                                Capsule(style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.32), lineWidth: 0.8)
+                            }
+                    } else {
+                        Capsule(style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .overlay {
+                                Capsule(style: .continuous)
+                                    .fill(Color.white.opacity(0.55))
+                            }
+                            .overlay {
+                                Capsule(style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.7), lineWidth: 0.8)
+                            }
+                    }
                 }
-            }
-            .clipShape(Capsule(style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+                .clipShape(Capsule(style: .continuous))
+                .scaleEffect(configuration.isPressed ? 0.98 : 1)
+                .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        }
     }
 }
 

@@ -8,6 +8,30 @@ public final class GeminiService {
 
     private init() {}
 
+    /// Produces a short, neutral overview using only report-change categories and counts.
+    /// The original report and sensitive identifiers never enter this prompt.
+    public func generateOverviewSummary(changeItems: [ChangeItem], openTaskCount: Int) async -> String {
+        let categories = changeItems.prefix(6).map { $0.changeType.displayName }.joined(separator: ", ")
+        let prompt = """
+        Write one calm, plain-language sentence for a credit-report review dashboard.
+        Say what the user should look at next without claiming fraud, abuse, identity theft, or coercion.
+        Use only these redacted facts: \(changeItems.count) report changes, \(openTaskCount) open tasks, categories: \(categories.isEmpty ? "none yet" : categories).
+        Do not use a greeting, markdown, legal advice, or a promise of an outcome.
+        """
+
+        if let aiText = try? await callGemini(prompt: prompt), !aiText.isEmpty {
+            return aiText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if changeItems.isEmpty {
+            return "Your report workspace is ready. Import or review a report when you are ready."
+        }
+        if openTaskCount == 0 {
+            return "You have \(changeItems.count) change\(changeItems.count == 1 ? "" : "s") to review and no open follow-up tasks."
+        }
+        return "You have \(changeItems.count) change\(changeItems.count == 1 ? "" : "s") to review and \(openTaskCount) next step\(openTaskCount == 1 ? "" : "s") waiting for you."
+    }
+
     /// Generates structured dispute and recovery drafts using Gemini 3.6 Flash (or deterministic fallback)
     public func generateDraft(
         item: ChangeItem,
