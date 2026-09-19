@@ -3,8 +3,10 @@ import UniformTypeIdentifiers
 
 struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
+    let resetToken: Int
 
     @State private var assistantReply: String?
+    @State private var agentSuggestions: [AgentSuggestion] = []
     @State private var lastUserPrompt = ""
     @State private var prompt = ""
     @State private var isAgentProcessing = false
@@ -15,6 +17,10 @@ struct OverviewView: View {
     @State private var isClassifying = false
     @State private var showMoreReviewOptions = false
     @FocusState private var isPromptFocused: Bool
+
+    init(resetToken: Int = 0) {
+        self.resetToken = resetToken
+    }
 
     private var pendingItems: [ChangeItem] {
         appState.changeItems.filter { $0.classification == nil }
@@ -45,12 +51,11 @@ struct OverviewView: View {
                         if lastUserPrompt.isEmpty {
                             nextStepSection
                         } else if let assistantReply, !assistantReply.isEmpty {
-                            assistantReplyView(assistantReply)
-                                .font(MosaicFont.regular(17))
-                                .foregroundColor(Color.mosaicInk)
-                                .lineSpacing(5)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 12) {
+                                assistantReplyView(assistantReply)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                suggestionActions
+                            }
                         }
 
                         if isAgentProcessing {
@@ -89,6 +94,9 @@ struct OverviewView: View {
         } message: {
             Text(importMessage)
         }
+        .onChange(of: resetToken) { _ in
+            resetHomeState()
+        }
     }
 
     private var reportMetric: some View {
@@ -117,16 +125,114 @@ struct OverviewView: View {
         .padding(.bottom, 22)
     }
 
-    @ViewBuilder
     private func assistantReplyView(_ reply: String) -> some View {
-        if let formattedReply = try? AttributedString(
-            markdown: reply,
-            options: .init(interpretedSyntax: .full)
-        ) {
-            Text(formattedReply)
-        } else {
-            Text(reply)
+        let brief = decisionBrief(from: reply)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("Mosaic's read")
+                .font(MosaicFont.medium(18))
+                .foregroundColor(Color.mosaicInk)
+
+            decisionSection(
+                title: "What matters",
+                text: brief.whatMatters,
+                icon: "scope"
+            )
+            decisionSection(
+                title: "Next action",
+                text: brief.nextAction,
+                icon: "arrow.right.circle.fill"
+            )
+            decisionSection(
+                title: "What Mosaic can prepare",
+                text: brief.whatMosaicCanPrepare,
+                icon: "doc.text.fill"
+            )
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlass(tint: Color.white.opacity(0.78), cornerRadius: 24, shadowRadius: 8)
+    }
+
+    private func decisionSection(title: String, text: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color.mosaicViolet)
+                .frame(width: 22, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(MosaicFont.medium(13))
+                    .foregroundColor(Color.mosaicViolet)
+                Text(text)
+                    .font(MosaicFont.regular(16))
+                    .foregroundColor(Color.mosaicInk)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private struct DecisionBrief {
+        let whatMatters: String
+        let nextAction: String
+        let whatMosaicCanPrepare: String
+    }
+
+    private func decisionBrief(from reply: String) -> DecisionBrief {
+        var sections: [String: String] = [:]
+        var activeSection: String?
+
+        func append(_ text: String, to key: String) {
+            let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleaned.isEmpty else { return }
+            if sections[key]?.isEmpty == false {
+                sections[key] = (sections[key] ?? "") + " " + cleaned
+            } else {
+                sections[key] = cleaned
+            }
+        }
+
+        for rawLine in reply.components(separatedBy: .newlines) {
+            var line = rawLine
+                .replacingOccurrences(of: "**", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if line.hasPrefix("- ") || line.hasPrefix("• ") {
+                line = String(line.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            if line.count > 3,
+               line.first?.isNumber == true,
+               line.dropFirst(1).first == "." {
+                line = String(line.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            let normalized = line.lowercased()
+            let headings: [(String, String)] = [
+                ("what matters", "matters"),
+                ("next action", "next"),
+                ("what mosaic can prepare", "prepare")
+            ]
+            if let heading = headings.first(where: { normalized.hasPrefix($0.0) }) {
+                activeSection = heading.1
+                let remainder = String(line.dropFirst(heading.0.count))
+                    .trimmingCharacters(in: CharacterSet(charactersIn: " :—-"))
+                append(remainder, to: heading.1)
+            } else if let activeSection {
+                append(line, to: activeSection)
+            }
+        }
+
+        let fallback = reply
+            .components(separatedBy: .newlines)
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return DecisionBrief(
+            whatMatters: sections["matters"] ?? fallback,
+            nextAction: sections["next"] ?? "Review the source page and confirm the facts before taking action.",
+            whatMosaicCanPrepare: sections["prepare"] ?? "Mosaic can prepare an editable email draft, checklist, or follow-up reminder for your approval."
+        )
     }
 
     private var uploadReportAction: some View {
@@ -446,6 +552,42 @@ struct OverviewView: View {
         }
     }
 
+    @ViewBuilder
+    private var suggestionActions: some View {
+        if !agentSuggestions.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Suggested next step")
+                    .font(MosaicFont.medium(14))
+                    .foregroundColor(Color.mosaicSubtle)
+
+                ForEach(agentSuggestions) { suggestion in
+                    Button {
+                        handleSuggestion(suggestion)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: suggestion.action == "make_letter" ? "doc.text.fill" : "arrow.up.right")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(suggestion.label)
+                                .font(MosaicFont.medium(14))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundColor(Color.mosaicViolet)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.mosaicLavender.opacity(0.62))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isAgentProcessing)
+                    .accessibilityLabel(suggestion.label)
+                }
+            }
+        }
+    }
+
     private func chooseSuggestion(_ question: String) {
         prompt = question
         assistantReply = nil
@@ -524,27 +666,17 @@ struct OverviewView: View {
         lastUserPrompt = value
         prompt = ""
         assistantReply = nil
+        agentSuggestions = []
         isPromptFocused = false
         isAgentProcessing = true
+        let intent = GeminiService.shared.classifyChatIntent(
+            value,
+            hasReportContext: !appState.changeItems.isEmpty
+        )
 
         Task { @MainActor in
-            if isDraftRequest(value) {
-                guard let target = draftTarget(for: value) else {
-                    assistantReply = "Import a credit report first, then ask me to draft an email about a specific change."
-                    isAgentProcessing = false
-                    return
-                }
-
-                let classification = draftClassification(for: value)
-                let alreadyPrepared = appState.recoveryPackets.contains { $0.changeItemId == target.id }
-                await appState.createRecoveryPacket(for: target, classification: classification)
-                let itemName = target.issuerName ?? target.changeType.displayName
-                let preparedPacket = appState.recoveryPackets.first { $0.changeItemId == target.id }
-                assistantReply = alreadyPrepared
-                    ? "You already have a reviewable draft for \(itemName). I opened Letters so you can continue editing it."
-                    : "I prepared a reviewable email draft for \(itemName). Check every fact before sending."
-                appState.requestedRecoveryPacketID = preparedPacket?.id
-                appState.requestedTabIndex = 1
+            if intent == .letterDraft {
+                await prepareLetter(for: value)
                 isAgentProcessing = false
                 return
             }
@@ -552,27 +684,78 @@ struct OverviewView: View {
             if let backboardReply = await BackboardService.shared.generateAgentReply(
                 userMessage: value,
                 changeItems: appState.changeItems,
-                openTaskCount: openTaskCount
+                openTaskCount: openTaskCount,
+                intent: intent
             ), !backboardReply.isEmpty {
                 assistantReply = backboardReply
+                agentSuggestions = GeminiService.shared.suggestions(
+                    for: value,
+                    intent: intent,
+                    hasReportContext: !appState.changeItems.isEmpty
+                )
             } else {
                 let turn = await GeminiService.shared.generateAgentTurn(
                     userMessage: value,
                     changeItems: appState.changeItems,
-                    openTaskCount: openTaskCount
+                    openTaskCount: openTaskCount,
+                    intent: intent
                 )
                 if let reply = turn.reply, !reply.isEmpty {
                     assistantReply = reply
+                    agentSuggestions = turn.suggestions
                 }
             }
             isAgentProcessing = false
         }
     }
 
-    private func isDraftRequest(_ value: String) -> Bool {
-        let lowercased = value.lowercased()
-        let draftWords = ["draft", "compose", "write", "email", "e-mail", "mail", "letter"]
-        return draftWords.contains { lowercased.contains($0) }
+    private func prepareLetter(for value: String) async {
+        guard let target = draftTarget(for: value) else {
+            assistantReply = "Import a credit report first, then ask me to draft an email about a specific change."
+            return
+        }
+
+        let classification = draftClassification(for: value)
+        let alreadyPrepared = appState.recoveryPackets.contains { $0.changeItemId == target.id }
+        await appState.createRecoveryPacket(for: target, classification: classification)
+        let itemName = target.issuerName ?? target.changeType.displayName
+        let preparedPacket = appState.recoveryPackets.first { $0.changeItemId == target.id }
+        assistantReply = alreadyPrepared
+            ? "You already have a reviewable draft for \(itemName). I opened Letters so you can continue editing it."
+            : "I prepared a reviewable email draft for \(itemName). Check every fact before sending."
+        appState.requestedRecoveryPacketID = preparedPacket?.id
+        appState.requestedTabIndex = preparedPacket == nil ? nil : 1
+        agentSuggestions = []
+    }
+
+    private func handleSuggestion(_ suggestion: AgentSuggestion) {
+        guard !isAgentProcessing else { return }
+
+        if suggestion.action == "make_letter" {
+            let letterPrompt = suggestion.prompt ?? "Draft a dispute letter for the most important unfamiliar change."
+            lastUserPrompt = letterPrompt
+            prompt = ""
+            assistantReply = nil
+            agentSuggestions = []
+            isPromptFocused = false
+            isAgentProcessing = true
+            Task { @MainActor in
+                await prepareLetter(for: letterPrompt)
+                isAgentProcessing = false
+            }
+        } else if let suggestedPrompt = suggestion.prompt {
+            chooseSuggestion(suggestedPrompt)
+        }
+    }
+
+    private func resetHomeState() {
+        lastUserPrompt = ""
+        prompt = ""
+        assistantReply = nil
+        agentSuggestions = []
+        isAgentProcessing = false
+        isPromptFocused = false
+        showMoreReviewOptions = false
     }
 
     private func draftTarget(for value: String) -> ChangeItem? {

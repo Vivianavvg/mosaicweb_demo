@@ -122,12 +122,15 @@ public final class BackboardService {
     public func generateAgentReply(
         userMessage: String,
         changeItems: [ChangeItem],
-        openTaskCount: Int
+        openTaskCount: Int,
+        intent: MosaicChatIntent = .reportReview
     ) async -> String? {
         guard !apiKey.isEmpty, !apiKey.hasPrefix("YOUR_") else { return nil }
 
         let safeMessage = RedactionEngine.shared.redactText(userMessage)
-        localMemory.selectedWorkflowState = "coaching_report_review"
+        localMemory.selectedWorkflowState = intent == .generalQuestion
+            ? "answering_general_question"
+            : "coaching_report_review"
         localMemory.lastUpdated = Date()
         persistLocalMemory()
         let changeContext = safeChangeContext(for: changeItems)
@@ -136,11 +139,19 @@ public final class BackboardService {
         You are Mosaic Continuity Coach, the decision-support layer inside a privacy-first credit-health app.
         Turn the supplied evidence into a calm, specific decision brief that helps the user take one safe next step.
         Use the workflow memory to continue the user's process instead of restarting with generic advice.
-        Answer in 3 short parts: What matters, Next action, and What Mosaic can prepare.
+        Format exactly as three labeled paragraphs:
+        WHAT MATTERS: one short paragraph about the most relevant evidence.
+        NEXT ACTION: one short paragraph with the safest useful next step.
+        WHAT MOSAIC CAN PREPARE: one short paragraph describing an editable draft, checklist, or reminder Mosaic can prepare.
+        Do not use bullets, numbered lists, markdown, or extra headings.
         Keep the answer under 120 words and use plain language.
         Never claim fraud, identity theft, coercion, legal outcomes, or guaranteed deletion.
         Do not invent balances, scores, income, or account details.
         Explain that Mosaic prepares drafts for user review and never submits disputes automatically.
+        The user's classified intent is: \(intent.rawValue).
+        For generalQuestion, answer the user's question directly instead of forcing a report-specific interpretation.
+        For reportReview, use only the redacted report evidence supplied below.
+        If the question is outside Mosaic's credit-report scope, say that briefly and redirect to a relevant Mosaic capability.
         If the user has no report changes yet, tell them to upload a report instead of pretending to analyze one.
         """
         let content = """

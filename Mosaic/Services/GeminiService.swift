@@ -1,5 +1,11 @@
 import Foundation
 
+public enum MosaicChatIntent: String {
+    case letterDraft
+    case reportReview
+    case generalQuestion
+}
+
 public final class GeminiService {
     public static let shared = GeminiService()
 
@@ -7,6 +13,42 @@ public final class GeminiService {
     private let modelName: String = "gemini-3.6-flash"
 
     private init() {}
+
+    /// Keeps Mosaic-specific drafting separate from ordinary questions.
+    /// A generic request such as "write an email to my landlord" stays in chat;
+    /// a credit-report dispute request can open the reviewable Letters workflow.
+    public func classifyChatIntent(_ message: String, hasReportContext: Bool = false) -> MosaicChatIntent {
+        let lowercased = message.lowercased()
+        let draftActions = ["draft", "write", "compose", "prepare", "create", "generate"]
+        let letterTerms = ["letter", "dispute", "email", "e-mail", "mail"]
+        let mosaicTerms = [
+            "credit report", "credit bureau", "bureau", "creditor", "furnisher",
+            "collection", "collections", "account", "inquiry", "balance",
+            "not mine", "unrecognized", "unfamiliar", "authorized user", "joint account"
+        ]
+        let reportTerms = [
+            "credit report", "report", "account", "collection", "collections",
+            "credit score", "credit", "inquiry", "balance", "address", "change"
+        ]
+        let reviewTerms = [
+            "review", "what changed", "what matters", "what should i do",
+            "what do i do", "next step", "recognize", "recognise", "explain"
+        ]
+
+        let hasDraftAction = draftActions.contains { lowercased.contains($0) }
+        let hasLetterTerm = letterTerms.contains { lowercased.contains($0) }
+        let hasMosaicTerm = mosaicTerms.contains { lowercased.contains($0) }
+        let hasReportTerm = reportTerms.contains { lowercased.contains($0) }
+        let hasReviewTerm = reviewTerms.contains { lowercased.contains($0) }
+
+        if hasDraftAction && hasLetterTerm && (hasMosaicTerm || (hasReportContext && lowercased.contains("this"))) {
+            return .letterDraft
+        }
+        if hasReportTerm || hasReviewTerm {
+            return .reportReview
+        }
+        return .generalQuestion
+    }
 
     /// Produces a short, neutral overview using only report-change categories and counts.
     /// The original report and sensitive identifiers never enter this prompt.
@@ -79,31 +121,46 @@ public final class GeminiService {
     public func generateAgentTurn(
         userMessage: String,
         changeItems: [ChangeItem],
-        openTaskCount: Int
+        openTaskCount: Int,
+        intent: MosaicChatIntent = .reportReview
     ) async -> AgentTurn {
         let safeMessage = RedactionEngine.shared.redactText(userMessage)
         let categories = changeItems.prefix(6).map { $0.changeType.displayName }.joined(separator: ", ")
         let prompt = """
         You are Mosaic Coach, a calm financial-health assistant for a privacy-first iPhone app.
-        Answer the user's question in 2-4 short sentences using only this redacted context:
+        Answer the user's question using only this redacted context:
         - Report changes: \(changeItems.count)
         - Open follow-up tasks: \(openTaskCount)
         - Change categories: \(categories.isEmpty ? "none yet" : categories)
+        - User intent: \(intent.rawValue)
         User message: \(safeMessage)
+
+        Format exactly as three labeled paragraphs:
+        WHAT MATTERS: one short paragraph about the most relevant evidence.
+        NEXT ACTION: one short paragraph with the safest useful next step.
+        WHAT MOSAIC CAN PREPARE: one short paragraph describing an editable draft, checklist, or reminder Mosaic can prepare.
+        Do not use bullets, numbered lists, markdown, or extra headings.
 
         Rules:
         - Be practical and nonjudgmental.
         - Never claim fraud, abuse, identity theft, or legal outcomes.
         - Do not invent balances, scores, income, or account details.
         - Explain that Mosaic prepares drafts and actions for user review; it does not submit disputes.
-        - If the user asks what to do next, prioritize reviewing the highest-severity report change and its source page.
+        - For reportReview, use the redacted report context and prioritize the source page when relevant.
+        - For generalQuestion, answer the question directly without pretending it is about a specific report change.
+          Only connect the answer to Mosaic when that connection is genuinely useful.
+        - For a question outside Mosaic's credit-report scope, say so briefly and offer the closest relevant Mosaic capability.
         """
 
         if let aiText = try? await callGemini(prompt: prompt), !aiText.isEmpty {
             return AgentTurn(
                 summary: "Mosaic Coach",
                 reply: aiText.trimmingCharacters(in: .whitespacesAndNewlines),
-                suggestions: suggestions(for: safeMessage)
+                suggestions: suggestions(
+                    for: safeMessage,
+                    intent: intent,
+                    hasReportContext: !changeItems.isEmpty
+                )
             )
         }
 
@@ -114,25 +171,39 @@ public final class GeminiService {
         )
     }
 
-    private func suggestions(for message: String) -> [AgentSuggestion] {
-        let lowercased = message.lowercased()
-        if lowercased.contains("learn") || lowercased.contains("explain") {
+    public func suggestions(
+        for message: String,
+        intent: MosaicChatIntent? = nil,
+        hasReportContext: Bool = false
+    ) -> [AgentSuggestion] {
+        let resolvedIntent = intent ?? classifyChatIntent(message, hasReportContext: hasReportContext)
+        switch resolvedIntent {
+        case .letterDraft:
             return [
-                AgentSuggestion(label: "Open Learn", action: "open_learn"),
-                AgentSuggestion(label: "Review changes", action: "review_changes")
+                AgentSuggestion(
+                    label: "Make this letter",
+                    action: "make_letter",
+                    prompt: "Draft a dispute letter for the most important unfamiliar change."
+                )
             ]
-        }
-        if lowercased.contains("letter") || lowercased.contains("dispute") || lowercased.contains("draft") {
-            return [
-                AgentSuggestion(label: "Open Letters", action: "open_recovery"),
-                AgentSuggestion(label: "Review changes", action: "review_changes")
+        case .reportReview:
+            var results = [
+                AgentSuggestion(label: "What next?", action: "ask", prompt: "What should I do next?")
             ]
+            if hasReportContext {
+                results.insert(
+                    AgentSuggestion(
+                        label: "Make this letter",
+                        action: "make_letter",
+                        prompt: "Draft a dispute letter for the most important unfamiliar change."
+                    ),
+                    at: 0
+                )
+            }
+            return results
+        case .generalQuestion:
+            return []
         }
-        return [
-            AgentSuggestion(label: "Review changes", action: "review_changes"),
-            AgentSuggestion(label: "What next?", action: "ask", prompt: "What should I do next?"),
-            AgentSuggestion(label: "Explain my options", action: "open_learn")
-        ]
     }
 
     private func deterministicAgentTurn(
@@ -186,7 +257,10 @@ public final class GeminiService {
         return AgentTurn(
             summary: "Mosaic Coach",
             reply: reply,
-            suggestions: suggestions(for: message)
+            suggestions: suggestions(
+                for: message,
+                hasReportContext: !changeItems.isEmpty
+            )
         )
     }
 

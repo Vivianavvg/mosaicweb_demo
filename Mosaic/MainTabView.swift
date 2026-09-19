@@ -11,14 +11,16 @@ struct MainTabView: View {
         if CommandLine.arguments.contains("--tab=4") { return 3 }
         return 0
     }()
+    @State private var homeResetVersion = 0
+    @State private var lastHomeTap: Date?
 
     init(onLogout: @escaping () -> Void) {
         self.onLogout = onLogout
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            OverviewView()
+        TabView(selection: tabSelection) {
+            OverviewView(resetToken: homeResetVersion)
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(0)
 
@@ -39,7 +41,36 @@ struct MainTabView: View {
         .onChange(of: appState.requestedTabIndex) { requestedTabIndex in
             guard let requestedTabIndex else { return }
             selectedTab = requestedTabIndex
+            lastHomeTap = nil
             appState.requestedTabIndex = nil
+        }
+    }
+
+    private var tabSelection: Binding<Int> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                selectTab(newValue)
+            }
+        )
+    }
+
+    private func selectTab(_ newValue: Int) {
+        guard newValue == 0 else {
+            selectedTab = newValue
+            lastHomeTap = nil
+            return
+        }
+
+        let now = Date()
+        if selectedTab == 0,
+           let lastHomeTap,
+           now.timeIntervalSince(lastHomeTap) < 0.55 {
+            homeResetVersion += 1
+            self.lastHomeTap = nil
+        } else {
+            selectedTab = 0
+            lastHomeTap = now
         }
     }
 }

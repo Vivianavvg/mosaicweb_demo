@@ -49,6 +49,8 @@ public final class AppState: ObservableObject {
 
     @Published public var letterProfile = LetterUserProfile()
 
+    private var packetCreationInFlight = Set<UUID>()
+
     private struct ReviewUndoSnapshot {
         let changeItems: [ChangeItem]
         let recoveryPackets: [RecoveryPacket]
@@ -110,7 +112,7 @@ public final class AppState: ObservableObject {
                 priorSnapshot = workspace.priorSnapshot
                 currentSnapshot = workspace.currentSnapshot
                 changeItems = workspace.changeItems
-                recoveryPackets = workspace.recoveryPackets
+                recoveryPackets = deduplicatedRecoveryPackets(workspace.recoveryPackets)
                 tasks = workspace.tasks
                 savedItems = workspace.savedItems
                 analytics = workspace.analytics
@@ -328,11 +330,19 @@ public final class AppState: ObservableObject {
     /// Creates a source-linked recovery packet for an item
     public func createRecoveryPacket(for item: ChangeItem, classification overrideClassification: UserClassification? = nil) async {
         guard !undoneReviewItemIDs.contains(item.id) else { return }
+        recoveryPackets = deduplicatedRecoveryPackets(recoveryPackets)
         guard !recoveryPackets.contains(where: { $0.changeItemId == item.id }) else { return }
+        guard packetCreationInFlight.insert(item.id).inserted else { return }
+        defer { packetCreationInFlight.remove(item.id) }
         isAnalyzing = true
         statusMessage = "Generating neutral dispute and recovery drafts..."
 
         let classification = overrideClassification ?? item.classification ?? .unrecognized
+        if overrideClassification != nil,
+           let changeIndex = changeItems.firstIndex(where: { $0.id == item.id }),
+           changeItems[changeIndex].classification == nil {
+            changeItems[changeIndex].classification = classification
+        }
         var packet = RecoveryPacket(
             changeItemId: item.id,
             classificationAtCreation: classification,
@@ -376,6 +386,11 @@ public final class AppState: ObservableObject {
         isAnalyzing = false
         statusMessage = nil
         scheduleCloudSync()
+    }
+
+    private func deduplicatedRecoveryPackets(_ packets: [RecoveryPacket]) -> [RecoveryPacket] {
+        var seenChangeItemIDs = Set<UUID>()
+        return packets.filter { seenChangeItemIDs.insert($0.changeItemId).inserted }
     }
 
     /// Updates task status and recalculates time-series analytics immediately
