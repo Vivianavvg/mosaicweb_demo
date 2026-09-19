@@ -22,12 +22,7 @@ struct OverviewView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: Color.mosaicHomeGradientColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            MosaicPaletteBackground(opacity: 1.0)
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
