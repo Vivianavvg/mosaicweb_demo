@@ -10,62 +10,67 @@ struct WelcomeView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.mosaicNavy, Color(hex: "090D16")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            LiquidGlassBackground()
 
             VStack(spacing: 0) {
                 Spacer()
 
-                // Brand Mark & Copy
-                VStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.mosaicAccent.opacity(0.2), Color.mosaicIndigo.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                // Brand Mark & Copy in Glass Hero Card
+                LiquidGlassCard(tint: Color.mosaicAccent, cornerRadius: 28, borderOpacity: 0.35, contentPadding: 24) {
+                    VStack(spacing: 16) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.mosaicAccent.opacity(0.25), Color.mosaicIndigo.opacity(0.12)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
-                            .frame(width: 88, height: 88)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .stroke(Color.mosaicAccent.opacity(0.4), lineWidth: 1.5)
-                            )
+                                .frame(width: 84, height: 84)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [Color.white.opacity(0.5), Color.mosaicAccent.opacity(0.3)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 1.5
+                                        )
+                                )
 
-                        Image(systemName: "square.grid.3x3.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color.mosaicAccent, Color.mosaicTeal],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                            Image(systemName: "square.grid.3x3.fill")
+                                .font(.system(size: 38))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color.mosaicAccent, Color.mosaicTeal],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
+                        }
+                        .padding(.bottom, 4)
+
+                        Text("Mosaic")
+                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+
+                        Text("See what changed on your credit report.")
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 12)
+
+                        Text("Mosaic helps you review report changes and organize next steps. It does not decide what happened or submit anything for you.")
+                            .font(.subheadline)
+                            .foregroundColor(Color.mosaicMuted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                            .lineSpacing(4)
                     }
-                    .padding(.bottom, 8)
-
-                    Text("Mosaic")
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-
-                    Text("See what changed on your credit report.")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-
-                    Text("Mosaic helps you review report changes and organize next steps. It does not decide what happened or submit anything for you.")
-                        .font(.subheadline)
-                        .foregroundColor(Color.mosaicMuted)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                        .lineSpacing(4)
                 }
+                .padding(.horizontal, 24)
                 .offset(y: appear ? 0 : 25)
                 .opacity(appear ? 1 : 0)
 
@@ -83,15 +88,19 @@ struct WelcomeView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            LinearGradient(
-                                colors: [Color.mosaicAccent, Color(hex: "0284C7")],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                            ZStack {
+                                LinearGradient(
+                                    colors: [Color.mosaicAccent, Color(hex: "0284C7")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.4), lineWidth: 1)
+                            }
                         )
                         .foregroundColor(Color.mosaicNavy)
-                        .cornerRadius(14)
-                        .shadow(color: Color.mosaicAccent.opacity(0.25), radius: 10, y: 4)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.mosaicAccent.opacity(0.35), radius: 14, y: 4)
                     }
 
                     // Synthetic Demo Data Bypass (for evaluation & offline judging)
@@ -107,13 +116,8 @@ struct WelcomeView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.mosaicCardBg)
                         .foregroundColor(Color.mosaicAmber)
-                        .cornerRadius(14)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.mosaicAmber.opacity(0.3), lineWidth: 1)
-                        )
+                        .liquidGlass(tint: Color.mosaicAmber, cornerRadius: 16, borderOpacity: 0.38)
                     }
 
                     // Privacy Explanation
@@ -126,10 +130,13 @@ struct WelcomeView: View {
                         }
                         .font(.footnote)
                         .foregroundColor(Color.mosaicMuted)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .liquidGlass(tint: Color.clear, cornerRadius: 100, borderOpacity: 0.20, shadowRadius: 0)
                         .padding(.top, 4)
                     }
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 24)
                 .padding(.bottom, 48)
                 .offset(y: appear ? 0 : 30)
                 .opacity(appear ? 1 : 0)

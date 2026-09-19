@@ -6,298 +6,239 @@ struct ScanView: View {
 
     @State private var showFilePicker: Bool = false
     @State private var showSafetyNotice: Bool = false
-    @State private var importedFileName: String? = nil
-    @State private var importedFileSize: String? = nil
-    @State private var importedFingerprint: String? = nil
-    @State private var errorMessage: String? = nil
     @State private var showPDFModal: Bool = false
     @State private var pdfURLForModal: URL? = nil
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Import & Compare")
-                                .font(.title.bold())
-                                .foregroundColor(.white)
-                            Text("Extract report facts with local on-device privacy")
-                                .font(.subheadline)
-                                .foregroundColor(Color.mosaicMuted)
-                        }
-                        Spacer()
-                        if appState.currentSnapshot?.isSynthetic ?? false {
-                            SyntheticBadge()
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+            ZStack {
+                LiquidGlassBackground()
 
-                    // Safety Guarantee Banner
-                    HStack(spacing: 12) {
-                        Image(systemName: "lock.shield.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(Color.mosaicAccent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("On-Device Processing Only")
-                                .font(.subheadline.bold())
-                                .foregroundColor(.white)
-                            Text("Your PDF stays in your iPhone's protected sandbox. No unredacted documents are transmitted.")
-                                .font(.caption)
-                                .foregroundColor(Color.mosaicMuted)
-                        }
-                        Spacer()
-                        Button(action: { showSafetyNotice = true }) {
-                            Image(systemName: "info.circle")
-                                .font(.headline)
-                                .foregroundColor(Color.mosaicAccent)
-                        }
-                    }
-                    .padding(14)
-                    .background(Color.mosaicCardBg)
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mosaicCardBorder, lineWidth: 1))
-                    .padding(.horizontal, 20)
-
-                    // Active Snapshots Card
-                    if let current = appState.currentSnapshot {
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Label("Report File Loaded", systemImage: "doc.text.fill")
-                                    .font(.headline)
-                                    .foregroundColor(Color.mosaicTeal)
-                                Spacer()
-                                Text(current.isSynthetic ? "Synthetic Demo" : "Local PDF")
-                                    .font(.caption2.bold())
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color.white.opacity(0.1))
-                                    .cornerRadius(6)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Header Bar
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Credit Reports")
+                                    .font(.title2.bold())
                                     .foregroundColor(.white)
+                                Text("Spot new accounts, balance spikes, and collections.")
+                                    .font(.footnote)
+                                    .foregroundColor(Color.mosaicMuted)
                             }
-
-                            VStack(alignment: .leading, spacing: 6) {
-                                InfoRow(label: "Report Date", value: current.reportDate.map { DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .none) } ?? "March 2026")
-                                InfoRow(label: "Pages", value: "\(current.pageCount) Pages")
-                                InfoRow(label: "SHA-256 Fingerprint", value: String(current.localFingerprint.prefix(24)) + "...")
-                                InfoRow(label: "Extracted Accounts", value: "\(current.accounts.count) items found")
-                                InfoRow(label: "Inquiries", value: "\(current.inquiries.count) inquiries")
-                            }
-
-                            Divider().background(Color.mosaicCardBorder)
-
-                            // Actions
-                            VStack(spacing: 10) {
-                                NavigationLink(destination: ExtractionReviewView(snapshot: current, onProceedToCompare: {})) {
-                                    HStack {
-                                        Image(systemName: "list.bullet.clipboard")
-                                        Text("Review Extracted Facts & Confidence")
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                    }
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.white.opacity(0.06))
-                                    .cornerRadius(10)
-                                }
-
-                                NavigationLink(destination: CompareView()) {
-                                    HStack {
-                                        Image(systemName: "arrow.triangle.swap")
-                                        Text("View Report Changes (\(appState.changeItems.count))")
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                    }
-                                    .font(.headline)
-                                    .foregroundColor(Color.mosaicNavy)
-                                    .padding()
-                                    .background(Color.mosaicAccent)
-                                    .cornerRadius(10)
-                                }
-
-                                Button(action: {
-                                    pdfURLForModal = SyntheticDataService.shared.generateSyntheticPDFFile(isCurrentReport: true)
-                                    showPDFModal = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "doc.viewfinder.fill")
-                                        Text("View Rendered Report PDF")
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                    }
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(Color.mosaicTeal)
-                                    .padding()
-                                    .background(Color.mosaicTeal.opacity(0.12))
-                                    .cornerRadius(10)
-                                }
-                            }
+                            Spacer()
+                            QuickExitButton()
                         }
-                        .padding(16)
-                        .background(Color.mosaicCardBg)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mosaicCardBorder, lineWidth: 1))
                         .padding(.horizontal, 20)
-                    }
+                        .padding(.top, 12)
 
-                    // Import Options Section
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Import New Credit Report")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                        // Privacy & Confidentiality Guarantee
+                        LiquidGlassCard(tint: Color.mosaicTeal, cornerRadius: 16, borderOpacity: 0.25, contentPadding: 14) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "lock.shield.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Color.mosaicTeal)
 
-                        // 1. Files Picker Button
-                        Button(action: { showFilePicker = true }) {
-                            HStack {
-                                Image(systemName: "folder.badge.plus")
-                                    .font(.system(size: 20))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Select PDF from Files")
-                                        .font(.headline)
-                                    Text("Digital or scanned credit report (PDF)")
+                                    Text("100% Private On-Device Analysis")
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.white)
+                                    Text("Your reports stay inside your iPhone. Social Security numbers and personal addresses are masked automatically.")
                                         .font(.caption)
                                         .foregroundColor(Color.mosaicMuted)
+                                        .lineSpacing(2)
                                 }
-                                Spacer()
-                                Image(systemName: "chevron.right")
                             }
-                            .foregroundColor(.white)
-                            .padding(16)
-                            .background(Color.mosaicCardBg)
-                            .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mosaicCardBorder, lineWidth: 1))
                         }
+                        .padding(.horizontal, 20)
 
-                        // 2. 1-Tap Synthetic Demo Fixture
-                        Button(action: {
-                            withAnimation {
-                                appState.loadSyntheticDemo()
+                        // If Report Is Loaded
+                        if let current = appState.currentSnapshot {
+                            LiquidGlassCard(tint: Color.mosaicAccent, cornerRadius: 22, borderOpacity: 0.35, contentPadding: 20) {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("ACTIVE COMPARISON")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(Color.mosaicAccent)
+                                                .tracking(1)
+                                            Text("March 2026 vs December 2025")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                        }
+                                        Spacer()
+                                        Text("\(appState.changeItems.count) Changes")
+                                            .font(.caption.bold())
+                                            .foregroundColor(Color.mosaicNavy)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color.mosaicAccent)
+                                            .clipShape(Capsule())
+                                    }
+
+                                    VStack(spacing: 10) {
+                                        ReportSummaryRow(title: "Current Snapshot", subtitle: "March 2026 Report (14 accounts)", icon: "doc.text.fill", color: Color.mosaicAccent)
+                                        ReportSummaryRow(title: "Prior Baseline", subtitle: "December 2025 Report (12 accounts)", icon: "clock.arrow.circlepath", color: Color.mosaicIndigo)
+                                        ReportSummaryRow(title: "Key Finding", subtitle: "1 new collection, 1 large balance surge", icon: "exclamationmark.triangle.fill", color: Color.mosaicRose)
+                                    }
+
+                                    Divider().background(Color.white.opacity(0.12))
+
+                                    // Action: Inspect Changes
+                                    NavigationLink(destination: CompareView()) {
+                                        HStack {
+                                            Image(systemName: "sparkles")
+                                            Text("Review What Changed (\(appState.changeItems.count) items)")
+                                                .fontWeight(.bold)
+                                            Spacer()
+                                            Image(systemName: "arrow.right")
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(Color.mosaicNavy)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .padding(.horizontal, 16)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [Color.mosaicAccent, Color.mosaicRoseGold],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .cornerRadius(12)
+                                    }
+
+                                    // View PDF Modal
+                                    Button(action: {
+                                        pdfURLForModal = SyntheticDataService.shared.generateSyntheticPDFFile(isCurrentReport: true)
+                                        showPDFModal = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "eye.fill")
+                                            Text("View Clean Report PDF")
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                        }
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.vertical, 10)
+                                    }
+                                }
                             }
-                        }) {
-                            HStack {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(Color.mosaicAmber)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Load Synthetic Demo Fixture")
+                            .padding(.horizontal, 20)
+                        } else {
+                            // Empty State / Demo Button
+                            LiquidGlassCard(tint: Color.mosaicAccent, cornerRadius: 22, borderOpacity: 0.35, contentPadding: 22) {
+                                VStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.mosaicAccent.opacity(0.15))
+                                            .frame(width: 64, height: 64)
+                                        Image(systemName: "doc.viewfinder.fill")
+                                            .font(.system(size: 30))
+                                            .foregroundColor(Color.mosaicAccent)
+                                    }
+
+                                    Text("Start Your Credit Review")
                                         .font(.headline)
                                         .foregroundColor(.white)
-                                    Text("Simulate Prior (Dec 2025) vs Current (Mar 2026)")
+
+                                    Text("Upload your official credit report PDF or load our pre-configured sample report to see how Mosaic protects your rights.")
+                                        .font(.footnote)
+                                        .foregroundColor(Color.mosaicMuted)
+                                        .multilineTextAlignment(.center)
+                                        .lineSpacing(3)
+
+                                    Button(action: {
+                                        appState.loadSyntheticDemo()
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "sparkles")
+                                            Text("Load Sample Report (Dec vs Mar)")
+                                                .fontWeight(.bold)
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(Color.mosaicNavy)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(Color.mosaicAccent)
+                                        .cornerRadius(12)
+                                    }
+
+                                    Button(action: {
+                                        showFilePicker = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "arrow.up.doc")
+                                            Text("Choose PDF from Files")
+                                        }
+                                        .font(.footnote.weight(.medium))
+                                        .foregroundColor(Color.mosaicMuted)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
+
+                        // Helpful Credit Advice Card
+                        LiquidGlassCard(tint: Color.mosaicAmber, cornerRadius: 16, borderOpacity: 0.20, contentPadding: 16) {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(Color.mosaicAmber)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("How to get your free official reports")
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.white)
+                                    Text("You are legally entitled to a free weekly credit report from Equifax, Experian, and TransUnion at AnnualCreditReport.com. Never pay for your own report.")
                                         .font(.caption)
                                         .foregroundColor(Color.mosaicMuted)
+                                        .lineSpacing(2)
                                 }
-                                Spacer()
-                                Text("Ready")
-                                    .font(.caption.bold())
-                                    .foregroundColor(Color.mosaicAmber)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.mosaicAmber.opacity(0.15))
-                                    .cornerRadius(6)
                             }
-                            .padding(16)
-                            .background(Color.mosaicCardBg)
-                            .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mosaicAmber.opacity(0.3), lineWidth: 1))
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 96)
                     }
-                    .padding(.horizontal, 20)
-
-                    if let err = errorMessage {
-                        Text(err)
-                            .font(.caption)
-                            .foregroundColor(Color.mosaicRose)
-                            .padding(.horizontal, 20)
-                    }
-
-                    Spacer().frame(height: 30)
                 }
             }
-            .background(Color.mosaicNavy.ignoresSafeArea())
-            .sheet(isPresented: $showSafetyNotice) {
-                PrivacyNoticeSheet()
-            }
+            .navigationBarHidden(true)
             .sheet(isPresented: $showPDFModal) {
                 if let url = pdfURLForModal {
-                    PDFViewerModal(url: url, title: "Rendered Credit Report PDF")
-                }
-            }
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [.pdf],
-                allowsMultipleSelection: false
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    guard let selectedUrl = urls.first else { return }
-                    processSelectedPDF(at: selectedUrl)
-                case .failure(let error):
-                    errorMessage = "File selection error: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-
-    private func processSelectedPDF(at url: URL) {
-        Task {
-            do {
-                let sandboxURL = try SecurityManager.shared.copyToSandbox(from: url)
-                let data = try Data(contentsOf: sandboxURL)
-                let fingerprint = SecurityManager.shared.sha256(for: data)
-                let extraction = try await PDFExtractionService.shared.extract(from: sandboxURL)
-
-                // If document looks like demo, load synthetic structure; otherwise build structured snapshot
-                let snapshot = ReportSnapshot(
-                    userId: appState.userSub ?? "local_user",
-                    localFingerprint: "sha256:\(fingerprint.prefix(16))",
-                    reportDate: Date(),
-                    importedAt: Date(),
-                    pageCount: extraction.pageCount,
-                    storageMode: .localOnly,
-                    isSynthetic: extraction.isSynthetic,
-                    accounts: [
-                        ReportAccount(
-                            issuerName: "Primary Bank Account",
-                            accountLast4: "1234",
-                            accountType: "Revolving",
-                            balanceCents: 45000,
-                            sourcePage: 1,
-                            extractionConfidence: 0.95
-                        )
-                    ],
-                    inquiries: [],
-                    addresses: []
-                )
-
-                await MainActor.run {
-                    appState.currentSnapshot = snapshot
-                    appState.changeItems = ReportDiffEngine.shared.diff(current: snapshot, prior: appState.priorSnapshot)
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = "Extraction failed: \(error.localizedDescription)"
+                    PDFViewerModal(url: url, title: "Report Document")
                 }
             }
         }
     }
 }
 
-private struct InfoRow: View {
-    let label: String
-    let value: String
+private struct ReportSummaryRow: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
 
     var body: some View {
-        HStack {
-            Text(label)
-                .font(.caption)
-                .foregroundColor(Color.mosaicMuted)
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(color.opacity(0.15))
+                    .frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(color)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.bold())
+                    .foregroundColor(.white)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundColor(Color.mosaicMuted)
+            }
             Spacer()
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(.white)
         }
     }
 }

@@ -5,123 +5,131 @@ struct RecoveryView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Dispute Recovery")
-                                .font(.title.bold())
-                                .foregroundColor(.white)
-                            Text("Draft dispute letters, worksheets & statutory deadlines")
-                                .font(.subheadline)
-                                .foregroundColor(Color.mosaicMuted)
-                        }
-                        Spacer()
-                        if appState.currentSnapshot?.isSynthetic ?? false {
-                            SyntheticBadge()
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+            ZStack {
+                LiquidGlassBackground()
 
-                    // Deadline Tracker Quick Access Card
-                    NavigationLink(destination: DeadlineTrackerView()) {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.mosaicAmber.opacity(0.15))
-                                    .frame(width: 48, height: 48)
-                                Image(systemName: "calendar.badge.clock")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(Color.mosaicAmber)
-                            }
-
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Header with Quick Exit
+                        HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("Deadline & Response Tracker")
-                                    .font(.headline)
+                                Text("Dispute Letters & Recovery")
+                                    .font(.title2.bold())
                                     .foregroundColor(.white)
-                                Text("\(appState.tasks.filter { !$0.isCompleted }.count) open deadlines • 30-day FCRA windows")
-                                    .font(.caption)
+                                Text("Your customized legal dispute letters and action packets.")
+                                    .font(.footnote)
                                     .foregroundColor(Color.mosaicMuted)
                             }
-
                             Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(Color.mosaicMuted)
+                            QuickExitButton()
                         }
-                        .padding(16)
-                        .background(Color.mosaicCardBg)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mosaicCardBorder, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 20)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
 
-                    // Recovery Packets List
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            Text("Active Recovery Packets")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            Spacer()
-                            Text("\(appState.recoveryPackets.count) Total")
-                                .font(.caption.bold())
-                                .foregroundColor(Color.mosaicAccent)
-                        }
+                        // 30-Day Legal Deadline Card
+                        NavigationLink(destination: DeadlineTrackerView()) {
+                            LiquidGlassCard(tint: Color.mosaicAmber, cornerRadius: 18, borderOpacity: 0.3, contentPadding: 16) {
+                                HStack(spacing: 14) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.mosaicAmber.opacity(0.18))
+                                            .frame(width: 48, height: 48)
+                                        Image(systemName: "calendar.badge.clock")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(Color.mosaicAmber)
+                                    }
 
-                        if appState.recoveryPackets.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "folder.badge.questionmark")
-                                    .font(.system(size: 36))
-                                    .foregroundColor(Color.mosaicMuted)
-                                Text("No Recovery Packets Created Yet")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                Text("Mark unfamiliar or pressured items on your report to organize draft materials and official next steps.")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color.mosaicMuted)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(28)
-                            .background(Color.mosaicCardBg)
-                            .cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mosaicCardBorder, lineWidth: 1))
-                        } else {
-                            ForEach($appState.recoveryPackets) { $packet in
-                                NavigationLink(destination: PacketDetailView(packet: $packet)) {
-                                    PacketSummaryCard(packet: packet)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("30-Day Statutory Deadlines")
+                                            .font(.subheadline.bold())
+                                            .foregroundColor(.white)
+                                        Text("\(appState.tasks.filter { !$0.isCompleted }.count) open response windows • Federal FCRA protections")
+                                            .font(.caption)
+                                            .foregroundColor(Color.mosaicMuted)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.bold())
+                                        .foregroundColor(Color.mosaicMuted)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
-                    }
-                    .padding(.horizontal, 20)
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 20)
 
-                    // Consumer Disclaimer Banner
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundColor(Color.mosaicTeal)
-                            Text("Consumer Protection Notice")
-                                .font(.caption.bold())
-                                .foregroundColor(Color.mosaicTeal)
+                        // Recovery Packets List
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Text("Your Dispute Packets")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("\(appState.recoveryPackets.count) Ready")
+                                    .font(.caption.bold())
+                                    .foregroundColor(Color.mosaicAccent)
+                            }
+                            .padding(.horizontal, 20)
+
+                            if appState.recoveryPackets.isEmpty {
+                                LiquidGlassCard(tint: Color.mosaicIndigo, cornerRadius: 18, borderOpacity: 0.25, contentPadding: 24) {
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "envelope.badge.shield.half.filled")
+                                            .font(.system(size: 36))
+                                            .foregroundColor(Color.mosaicMuted)
+                                        Text("No Dispute Packets Generated Yet")
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                        Text("Review your credit report changes in the Scan tab and select 'I was pressured' or 'I didn't authorize this' to create your customized legal letters.")
+                                            .font(.footnote)
+                                            .foregroundColor(Color.mosaicMuted)
+                                            .multilineTextAlignment(.center)
+                                            .lineSpacing(3)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .padding(.horizontal, 20)
+                            } else {
+                                ForEach($appState.recoveryPackets) { $packet in
+                                    NavigationLink(destination: PacketDetailView(packet: $packet)) {
+                                        PacketSummaryCard(packet: packet)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.horizontal, 20)
+                                }
+                            }
                         }
-                        Text("Mosaic organizes materials for your personal review. You decide what to send, when to send it, and how to verify information. Mosaic never submits disputes automatically.")
-                            .font(.caption2)
-                            .foregroundColor(Color.mosaicMuted)
-                            .lineSpacing(2)
+
+                        // Evidence & Safety Tips
+                        NavigationLink(destination: InteractiveChecklistView()) {
+                            LiquidGlassCard(tint: Color.mosaicTeal, cornerRadius: 16, borderOpacity: 0.25, contentPadding: 16) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "folder.badge.plus")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(Color.mosaicTeal)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Dispute Evidence & Records Checklist")
+                                            .font(.subheadline.bold())
+                                            .foregroundColor(.white)
+                                        Text("Keep proof of mailing and copy required ID documents before sending.")
+                                            .font(.caption)
+                                            .foregroundColor(Color.mosaicMuted)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.bold())
+                                        .foregroundColor(Color.mosaicMuted)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 96)
                     }
-                    .padding(14)
-                    .background(Color.white.opacity(0.03))
-                    .cornerRadius(12)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
                 }
             }
-            .background(Color.mosaicNavy.ignoresSafeArea())
             .navigationBarHidden(true)
         }
     }
@@ -131,58 +139,51 @@ private struct PacketSummaryCard: View {
     let packet: RecoveryPacket
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(packet.itemName)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    if let last4 = packet.itemLast4 {
-                        Text("Account Identifier: **** \(last4)")
-                            .font(.caption)
-                            .foregroundColor(Color.mosaicMuted)
+        LiquidGlassCard(tint: Color.mosaicAccent, cornerRadius: 18, borderOpacity: 0.3, contentPadding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(packet.itemName)
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        if let last4 = packet.itemLast4 {
+                            Text("Account: **** \(last4)")
+                                .font(.caption)
+                                .foregroundColor(Color.mosaicMuted)
+                        }
                     }
+                    Spacer()
+                    Text(packet.status.displayName)
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.mosaicTeal.opacity(0.18))
+                        .foregroundColor(Color.mosaicTeal)
+                        .cornerRadius(6)
                 }
-                Spacer()
-                Text(packet.status.displayName)
-                    .font(.caption2.bold())
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.mosaicTeal.opacity(0.15))
-                    .foregroundColor(Color.mosaicTeal)
-                    .cornerRadius(6)
-            }
 
-            Divider().background(Color.mosaicCardBorder)
+                Divider().background(Color.white.opacity(0.12))
 
-            HStack {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.text")
-                        .font(.caption2)
-                    Text("\(packet.documents.count) Drafts & Checklists")
-                        .font(.caption)
-                }
-                .foregroundColor(Color.mosaicAccent)
-
-                Spacer()
-
-                HStack(spacing: 4) {
-                    Image(systemName: "book.pages")
-                        .font(.caption2)
-                    Text("Page \(packet.sourcePage)")
-                        .font(.caption)
-                }
-                .foregroundColor(Color.mosaicMuted)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.text.fill")
+                            .font(.caption2)
+                        Text("\(packet.documents.count) Legal Letters & Checklists")
+                            .font(.caption.bold())
+                    }
                     .foregroundColor(Color.mosaicAccent)
-                    .padding(.leading, 6)
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        Text("Review & Export")
+                            .font(.caption.bold())
+                        Image(systemName: "arrow.right")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(Color.mosaicAccent)
+                }
             }
         }
-        .padding(16)
-        .background(Color.mosaicCardBg)
-        .cornerRadius(16)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mosaicCardBorder, lineWidth: 1))
     }
 }

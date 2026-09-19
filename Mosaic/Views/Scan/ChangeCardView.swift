@@ -8,151 +8,165 @@ struct ChangeCardView: View {
     @State private var showWhy: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Header: Type + Severity Badge + Source Page
-            HStack {
-                Text(item.changeType.displayName)
-                    .font(.headline)
-                    .foregroundColor(.white)
+        LiquidGlassCard(
+            tint: item.severity == .urgentReview ? Color.mosaicRose : Color.mosaicAccent,
+            cornerRadius: 18,
+            borderOpacity: 0.28,
+            contentPadding: 16
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                // Header: Type + Severity Badge + Source Page
+                HStack {
+                    Text(item.changeType.displayName)
+                        .font(.headline)
+                        .foregroundColor(.white)
 
-                Spacer()
+                    Spacer()
 
-                HStack(spacing: 6) {
-                    Text("Page \(item.sourcePages.map(String.init).joined(separator: ", "))")
-                        .font(.caption2.bold())
-                        .foregroundColor(Color.mosaicAccent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.mosaicAccent.opacity(0.15))
-                        .cornerRadius(6)
+                    HStack(spacing: 6) {
+                        Text("Page \(item.sourcePages.map(String.init).joined(separator: ", "))")
+                            .font(.caption2.bold())
+                            .foregroundColor(Color.mosaicAccent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.mosaicAccent.opacity(0.15))
+                            .cornerRadius(6)
 
-                    SeverityBadge(severity: item.severity)
-                }
-            }
-
-            // Summary
-            Text(item.summary)
-                .font(.subheadline.bold())
-                .foregroundColor(Color.mosaicAccent)
-
-            // Delta Summary
-            if let delta = item.deltaSummary {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "arrow.triangle.swap")
-                        .font(.caption)
-                        .foregroundColor(Color.mosaicAmber)
-                        .padding(.top, 2)
-                    Text(delta)
-                        .font(.caption)
-                        .foregroundColor(Color.mosaicMuted)
-                }
-            }
-
-            // Extraction Confidence & Expandable "Why am I seeing this?"
-            HStack {
-                Text("Confidence: \(Int(item.confidence * 100))%")
-                    .font(.caption2)
-                    .foregroundColor(Color.mosaicMuted)
-
-                Spacer()
-
-                Button(action: { showWhy.toggle() }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "questionmark.circle")
-                        Text(showWhy ? "Hide Explanation" : "Why am I seeing this?")
+                        SeverityBadge(severity: item.severity)
                     }
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(Color.mosaicAccent)
                 }
-            }
 
-            if showWhy {
-                Text(item.whySeeingThis)
-                    .font(.caption)
-                    .foregroundColor(Color.white.opacity(0.85))
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.black.opacity(0.25))
-                    .cornerRadius(8)
-            }
+                // Summary
+                Text(item.summary)
+                    .font(.subheadline.bold())
+                    .foregroundColor(Color.mosaicAccent)
 
-            Divider().background(Color.mosaicCardBorder)
+                // Delta Summary
+                if let delta = item.deltaSummary {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "arrow.triangle.swap")
+                            .font(.caption)
+                            .foregroundColor(Color.mosaicIndigo)
+                            .padding(.top, 2)
+                        Text(delta)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                }
 
-            // Classification Section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("How do you classify this item?")
+                // Plain English explanation toggle
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showWhy.toggle()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showWhy ? "chevron.down.circle.fill" : "questionmark.circle")
+                        Text(showWhy ? "Hide context" : "Why did Mosaic highlight this?")
+                        Spacer()
+                    }
                     .font(.caption.bold())
                     .foregroundColor(Color.mosaicMuted)
-
-                // 5 classification buttons
-                VStack(spacing: 6) {
-                    ClassificationButton(
-                        classification: .recognized,
-                        isSelected: item.classification == .recognized,
-                        action: { onClassify(.recognized) }
-                    )
-                    ClassificationButton(
-                        classification: .unrecognized,
-                        isSelected: item.classification == .unrecognized,
-                        action: { onClassify(.unrecognized) }
-                    )
-                    ClassificationButton(
-                        classification: .pressuredOrNotFreelyAgreed,
-                        isSelected: item.classification == .pressuredOrNotFreelyAgreed,
-                        action: { onClassify(.pressuredOrNotFreelyAgreed) }
-                    )
-                    HStack(spacing: 8) {
-                        ClassificationButton(
-                            classification: .notSure,
-                            isSelected: item.classification == .notSure,
-                            action: { onClassify(.notSure) }
-                        )
-                        ClassificationButton(
-                            classification: .ignored,
-                            isSelected: item.classification == .ignored,
-                            action: { onClassify(.ignored) }
-                        )
-                    }
                 }
-            }
 
-            // Calm transition & Packet Creation Prompt
-            if item.classification == .unrecognized || item.classification == .pressuredOrNotFreelyAgreed {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("You marked this item as unfamiliar or pressured. Mosaic can organize draft materials and official next steps for you to review.")
+                if showWhy {
+                    Text(item.whySeeingThis)
                         .font(.caption)
-                        .foregroundColor(Color.mosaicAmber)
-                        .lineSpacing(2)
+                        .foregroundColor(Color.mosaicMuted)
+                        .padding(10)
+                        .background(Color.black.opacity(0.25))
+                        .cornerRadius(8)
+                }
 
-                    Button(action: onCreatePacket) {
-                        HStack {
-                            Image(systemName: "folder.badge.plus")
-                            Text("Generate Recovery Packet & Dispute Drafts")
+                Divider().background(Color.white.opacity(0.10))
+
+                // Classification Section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Did you authorize this?")
+                        .font(.caption.bold())
+                        .foregroundColor(Color.mosaicMuted)
+
+                    // 5 classification buttons
+                    VStack(spacing: 6) {
+                        ClassificationButton(
+                            title: "This was mine",
+                            subtitle: "Recognized personal charge",
+                            icon: "checkmark.seal.fill",
+                            isSelected: item.classification == .recognized,
+                            action: { onClassify(.recognized) }
+                        )
+                        ClassificationButton(
+                            title: "I didn't authorize this",
+                            subtitle: "Unfamiliar charge or potential identity theft",
+                            icon: "shield.slash.fill",
+                            isSelected: item.classification == .unrecognized,
+                            action: { onClassify(.unrecognized) }
+                        )
+                        ClassificationButton(
+                            title: "I was pressured / coerced into this",
+                            subtitle: "Opened under duress or by an ex-partner (Coerced Debt)",
+                            icon: "person.crop.circle.badge.exclamationmark.fill",
+                            isSelected: item.classification == .pressuredOrNotFreelyAgreed,
+                            action: { onClassify(.pressuredOrNotFreelyAgreed) }
+                        )
+                        HStack(spacing: 8) {
+                            ClassificationButton(
+                                title: "Not Sure",
+                                subtitle: "Need to verify",
+                                icon: "questionmark.circle",
+                                isSelected: item.classification == .notSure,
+                                action: { onClassify(.notSure) }
+                            )
+                            ClassificationButton(
+                                title: "Ignore",
+                                subtitle: "Skip for now",
+                                icon: "eye.slash",
+                                isSelected: item.classification == .ignored,
+                                action: { onClassify(.ignored) }
+                            )
                         }
-                        .font(.subheadline.bold())
-                        .foregroundColor(Color.mosaicNavy)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.mosaicAmber)
-                        .cornerRadius(10)
                     }
                 }
-                .padding(12)
-                .background(Color.mosaicAmber.opacity(0.1))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.mosaicAmber.opacity(0.3), lineWidth: 1)
-                )
+
+                // Calm transition & Packet Creation Prompt
+                if item.classification == .unrecognized || item.classification == .pressuredOrNotFreelyAgreed {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(item.classification == .pressuredOrNotFreelyAgreed
+                             ? "🕊️ Coerced Debt Identified: Under state and federal protections, you have legal rights to contest debt opened under duress without your voluntary consent."
+                             : "🛡️ Unauthorized Item: Mosaic can generate your formal dispute letters to have this removed from your credit file.")
+                            .font(.caption)
+                            .foregroundColor(Color.mosaicAccent)
+                            .lineSpacing(2)
+
+                        Button(action: onCreatePacket) {
+                            HStack {
+                                Image(systemName: "folder.badge.plus")
+                                Text("Generate My Legal Dispute Packet")
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundColor(Color.mosaicNavy)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.mosaicAccent, Color.mosaicRoseGold],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(10)
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.mosaicAccent.opacity(0.12))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.mosaicAccent.opacity(0.3), lineWidth: 1)
+                    )
+                }
             }
         }
-        .padding(16)
-        .background(Color.mosaicCardBg)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.mosaicCardBorder, lineWidth: 1)
-        )
     }
 }
 
@@ -162,8 +176,8 @@ private struct SeverityBadge: View {
     var body: some View {
         Text(severity.label)
             .font(.caption2.bold())
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
             .background(color.opacity(0.2))
             .foregroundColor(color)
             .cornerRadius(6)
@@ -171,7 +185,7 @@ private struct SeverityBadge: View {
 
     var color: Color {
         switch severity {
-        case .informational: return Color.mosaicAccent
+        case .informational: return Color.mosaicIndigo
         case .review: return Color.mosaicAmber
         case .urgentReview: return Color.mosaicRose
         }
@@ -179,27 +193,39 @@ private struct SeverityBadge: View {
 }
 
 private struct ClassificationButton: View {
-    let classification: UserClassification
+    let title: String
+    var subtitle: String? = nil
+    var icon: String? = nil
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? Color.mosaicTeal : Color.mosaicMuted)
-                Text(classification.title)
-                    .font(.caption.weight(isSelected ? .bold : .medium))
-                    .foregroundColor(isSelected ? .white : Color.mosaicMuted)
+            HStack(spacing: 8) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : (icon ?? "circle"))
+                    .foregroundColor(isSelected ? Color.mosaicAccent : Color.mosaicMuted)
+                    .font(.system(size: 14))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.caption.weight(isSelected ? .bold : .medium))
+                        .foregroundColor(isSelected ? .white : Color.mosaicMuted)
+                    if let subtitle = subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 9))
+                            .foregroundColor(isSelected ? Color.white.opacity(0.8) : Color.mosaicMuted.opacity(0.7))
+                    }
+                }
+
                 Spacer()
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.mosaicTeal.opacity(0.15) : Color.white.opacity(0.03))
+            .background(isSelected ? Color.mosaicAccent.opacity(0.18) : Color.white.opacity(0.04))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.mosaicTeal.opacity(0.5) : Color.clear, lineWidth: 1)
+                    .stroke(isSelected ? Color.mosaicAccent.opacity(0.6) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
