@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>NeueMontreal-Bold.otf</string>
+		<string>NeueMontreal-BoldItalic.otf</string>
+		<string>NeueMontreal-Italic.otf</string>
+		<string>NeueMontreal-Light.otf</string>
+		<string>NeueMontreal-LightItalic.otf</string>
+		<string>NeueMontreal-Medium.otf</string>
+		<string>NeueMontreal-MediumItalic.otf</string>
+		<string>NeueMontreal-Regular.otf</string>
+		<string>Fonts/NeueMontreal-Bold.otf</string>
+		<string>Fonts/NeueMontreal-BoldItalic.otf</string>
+		<string>Fonts/NeueMontreal-Italic.otf</string>
+		<string>Fonts/NeueMontreal-Light.otf</string>
+		<string>Fonts/NeueMontreal-LightItalic.otf</string>
+		<string>Fonts/NeueMontreal-Medium.otf</string>
+		<string>Fonts/NeueMontreal-MediumItalic.otf</string>
+		<string>Fonts/NeueMontreal-Regular.otf</string>
+		<string>Resources/Fonts/NeueMontreal-Bold.otf</string>
+		<string>Resources/Fonts/NeueMontreal-BoldItalic.otf</string>
+		<string>Resources/Fonts/NeueMontreal-Italic.otf</string>
+		<string>Resources/Fonts/NeueMontreal-Light.otf</string>
+		<string>Resources/Fonts/NeueMontreal-LightItalic.otf</string>
+		<string>Resources/Fonts/NeueMontreal-Medium.otf</string>
+		<string>Resources/Fonts/NeueMontreal-MediumItalic.otf</string>
+		<string>Resources/Fonts/NeueMontreal-Regular.otf</string>
+	</array>
+</dict>
+</plist>

@@ -6,7 +6,7 @@ Whenever you or another agent update this file with bug reports, UI adjustments,
 ---
 
 ## ⚡ Current Status: IDLE
-- **Last Checked**: 2026-09-18 20:51:00 EDT
+- **Last Checked**: 2026-09-18 22:07:00 EDT
 - **Active Subagent**: None
 - **Task in Progress**: None
 - **System Health**: All builds green, simulator running smoothly.
@@ -21,6 +21,12 @@ Whenever you or another agent update this file with bug reports, UI adjustments,
 
 ## ✅ Completed Tasks History
 <!-- Completed items will automatically be moved here with verification details -->
+- [x] **Neue Montreal + Liquid Glass restyle to reference screens only (branch: `feat/liquid-glass-ui`)** (Completed 2026-09-18 22:07:00 EDT)
+  - Bundled all 8 Neue Montreal weights in `Mosaic/Resources/Fonts/` and registered them via `Info.plist` + `MosaicFont.registerBundledFonts()`.
+  - Light shadcn canvas: zinc page `#F4F5F7`, ink `#111111`, muted `#9CA3AF`, mint/teal hero gradient, white glass sheets, black capsule CTAs.
+  - Liquid glass chrome: circular header buttons, PERSONAL pill, floating tab bar with selection dot, frosted cards (specular rim + ultraThinMaterial).
+  - Mapped Mosaic features onto the three reference layouts: Overview (chart + 2×2 metrics), Recovery (hero balance + TRACK/PREPARE), Scan (invite-style banner + transaction list).
+  - Verified `xcodebuild` ** BUILD SUCCEEDED ** for iPhone 17 simulator; screenshots captured on Overview, Scan, Recovery, Learn, Settings.
 - [x] **Apple Liquid Glass UI everywhere & Women-Centered Redesign (branch: `feat/liquid-glass-ui`)** (Completed 2026-09-18 20:51:00 EDT)
   - **Color System Overhaul (`Color+Hex.swift`)**: Replaced cold developer cyan/slate with restorative velvety midnight amethyst (`#13101E`, `#1A142A`), warm rose gold (`#F472B6`), luminous coral blush (`#FB7185`), calming sage/seafoam (`#34D399`), soft lilac/lavender (`#A78BFA`), and honey champagne (`#FBBF24`).
   - **Liquid Glass System (`LiquidGlass.swift`)**: Built reusable `LiquidGlassModifier`, `LiquidGlassCard`, `LiquidGlassBackground`, `LiquidGlassBadge`, and frosted floating `LiquidGlassTabButton` using `.ultraThinMaterial`, specular edge reflections, and ambient glows.

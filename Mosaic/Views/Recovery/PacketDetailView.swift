@@ -18,7 +18,7 @@ struct PacketDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(packet.itemName)
                                 .font(.title3.bold())
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.mosaicInk)
                             if let last4 = packet.itemLast4 {
                                 Text("Account Identifier: **** \(last4)")
                                     .font(.caption)
@@ -81,7 +81,7 @@ struct PacketDetailView: View {
                     }
                 }
                 .padding(12)
-                .background(Color.white.opacity(0.02))
+                .background(Color.mosaicFill)
                 .cornerRadius(10)
 
                 // Section 3: Interactive Evidence & Freeze Checklists
@@ -93,7 +93,7 @@ struct PacketDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Interactive Evidence & Freeze Checklist")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.mosaicInk)
                             Text("Check off documents, track postal receipts & record bureau PINs")
                                 .font(.caption)
                                 .foregroundColor(Color.mosaicMuted)
@@ -111,7 +111,7 @@ struct PacketDetailView: View {
                 // Section 4-7: Packet Documents / Drafts
                 Text("Draft Materials & Worksheets")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                     .padding(.top, 4)
 
                 ForEach($packet.documents) { $doc in
@@ -133,10 +133,10 @@ struct PacketDetailView: View {
                         Text("Export Multi-Page Recovery Packet (PDF)")
                     }
                     .font(.headline)
-                    .foregroundColor(Color.mosaicNavy)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.mosaicAccent)
+                    .background(Color.mosaicInk)
                     .cornerRadius(12)
                 }
                 .padding(.top, 6)
@@ -150,7 +150,7 @@ struct PacketDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Dispute Deadlines & Follow-ups")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.mosaicInk)
                             Text("Track 30-day FCRA response windows & certified mail")
                                 .font(.caption)
                                 .foregroundColor(Color.mosaicMuted)
@@ -169,7 +169,7 @@ struct PacketDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Official Government Resources")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.mosaicInk)
 
                     LinkCard(
                         title: "FTC IdentityTheft.gov",
@@ -191,7 +191,7 @@ struct PacketDetailView: View {
             }
             .padding(16)
         }
-        .background(Color.mosaicNavy.ignoresSafeArea())
+        .background(Color.mosaicPage.ignoresSafeArea())
         .navigationTitle("Recovery Packet")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShareSheet) {
@@ -218,7 +218,7 @@ private struct DocumentRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(document.title)
                     .font(.subheadline.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                 HStack(spacing: 8) {
                     Text(document.generatedBy)
                         .font(.caption2)

@@ -10,7 +10,7 @@ struct PDFViewerModal: View {
         NavigationStack {
             VStack(spacing: 0) {
                 PDFKitRepresentedView(url: url)
-                    .background(Color.mosaicNavy)
+                    .background(Color.mosaicPage)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -39,7 +39,7 @@ public struct PDFKitRepresentedView: UIViewRepresentable {
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         pdfView.document = PDFDocument(url: url)
-        pdfView.backgroundColor = UIColor(red: 15/255, green: 23/255, blue: 42/255, alpha: 1.0)
+        pdfView.backgroundColor = UIColor(red: 244/255, green: 245/255, blue: 247/255, alpha: 1.0)
         return pdfView
     }
 

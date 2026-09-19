@@ -35,9 +35,9 @@ struct DraftEditorView: View {
             // Text Editor for Draft Content
             TextEditor(text: $document.draftText)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(Color.mosaicInk)
                 .scrollContentBackground(.hidden)
-                .background(Color.mosaicNavy)
+                .background(Color.mosaicPage)
                 .padding(12)
 
             Divider().background(Color.mosaicCardBorder)
@@ -56,7 +56,7 @@ struct DraftEditorView: View {
                         Text(isCopied ? "Copied" : "Copy")
                     }
                     .font(.subheadline.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 16)
                     .background(Color.mosaicCardBg)
@@ -72,7 +72,7 @@ struct DraftEditorView: View {
                         Text("Share / Export")
                     }
                     .font(.subheadline.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 16)
                     .background(Color.mosaicCardBg)
@@ -88,17 +88,17 @@ struct DraftEditorView: View {
                 }) {
                     Text("Save & Close")
                         .font(.subheadline.bold())
-                        .foregroundColor(Color.mosaicNavy)
+                        .foregroundColor(.white)
                         .padding(.vertical, 10)
                         .padding(.horizontal, 18)
-                        .background(Color.mosaicAccent)
+                        .background(Color.mosaicInk)
                         .cornerRadius(8)
                 }
             }
             .padding(14)
             .background(Color.mosaicDarkBg)
         }
-        .background(Color.mosaicNavy.ignoresSafeArea())
+        .background(Color.mosaicPage.ignoresSafeArea())
         .navigationTitle(document.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShareSheet) {

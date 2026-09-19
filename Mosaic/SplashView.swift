@@ -1,43 +1,30 @@
 import SwiftUI
 
 struct SplashView: View {
-    @State private var scale: CGFloat = 0.8
-    @State private var opacity: Double = 0.5
+    @State private var scale: CGFloat = 0.92
+    @State private var opacity: Double = 0.4
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(hex: "1a1a2e"), Color(hex: "16213e"), Color(hex: "0f3460")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            LiquidGlassBackground()
 
-            VStack(spacing: 20) {
-                Image(systemName: "square.grid.3x3.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(hex: "e94560"), Color(hex: "f5a623")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
+            VStack(spacing: 18) {
                 Text("Mosaic")
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                    .font(MosaicFont.medium(42))
                     .foregroundColor(.white)
+                    .shadow(color: Color.black.opacity(0.12), radius: 12, y: 4)
 
                 ProgressView()
-                    .tint(.white.opacity(0.7))
-                    .padding(.top, 8)
+                    .tint(.white.opacity(0.85))
             }
+            .padding(28)
+            .liquidGlass(cornerRadius: 32, shadowRadius: 20)
             .scaleEffect(scale)
             .opacity(opacity)
             .onAppear {
-                withAnimation(.easeOut(duration: 0.6)) {
-                    scale = 1.0
-                    opacity = 1.0
+                withAnimation(.easeOut(duration: 0.55)) {
+                    scale = 1
+                    opacity = 1
                 }
             }
         }

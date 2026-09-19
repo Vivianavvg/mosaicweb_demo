@@ -1,111 +1,106 @@
 import SwiftUI
 
 struct LearnView: View {
+    @EnvironmentObject private var appState: AppState
+
+    private var initials: String {
+        let name = appState.userName ?? "Mosaic"
+        let parts = name.split(separator: " ")
+        let letters = parts.prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "M" : String(letters)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 LiquidGlassBackground()
 
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        // Header Bar with Quick Exit
-                        HStack(alignment: .center) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Your Rights & Protection")
-                                    .font(.title2.bold())
-                                    .foregroundColor(.white)
-                                Text("Official legal rights, coerced debt laws, and safety guides.")
-                                    .font(.footnote)
+                        MosaicTopBar(profileTitle: "PERSONAL", initials: initials)
+
+                        MosaicSheet {
+                            VStack(alignment: .leading, spacing: 18) {
+                                Text("Learn")
+                                    .font(MosaicFont.medium(28))
+                                    .foregroundColor(Color.mosaicInk)
+                                Text("Rights, coerced debt, and next steps")
+                                    .font(MosaicFont.regular(14))
                                     .foregroundColor(Color.mosaicMuted)
+
+                                EducationGlassCard(
+                                    icon: "shield.lefthalf.filled",
+                                    title: "Coerced debt protections",
+                                    sourceCitation: "CFPB · CA SB 975 · NY · ME",
+                                    summary: "Debt incurred through threat, force, fraud, or duress can be disputed and separated.",
+                                    bullets: [
+                                        "Bureaus must review claims where consent was involuntary.",
+                                        "You can demand removal from accounts you did not open.",
+                                        "Mosaic drafts cite these protections for your review."
+                                    ],
+                                    linkTitle: "NNEDV financial abuse guide",
+                                    urlString: "https://nnedv.org/content/about-financial-abuse/"
+                                )
+
+                                EducationGlassCard(
+                                    icon: "person.crop.circle.badge.minus",
+                                    title: "Joint accounts & authorized users",
+                                    sourceCitation: "Consumer Financial Protection Bureau",
+                                    summary: "If an ex-partner added you or pressured a joint card, you can freeze or unlink liability.",
+                                    bullets: [
+                                        "Authorized users can request immediate issuer removal.",
+                                        "Removal can delete that card’s history from your file.",
+                                        "Joint accounts can be frozen to stop new charges."
+                                    ],
+                                    linkTitle: "CFPB authorized user guide",
+                                    urlString: "https://www.consumerfinance.gov/ask-cfpb/am-i-responsible-for-debt-on-a-credit-card-account-if-i-am-only-an-authorized-user-en-1367/"
+                                )
+
+                                EducationGlassCard(
+                                    icon: "lock.shield.fill",
+                                    title: "Credit freezes are free",
+                                    sourceCitation: "Federal Trade Commission",
+                                    summary: "A freeze blocks new creditors from pulling your file so nobody can open accounts in your name.",
+                                    bullets: [
+                                        "Place separately at Equifax, Experian, and TransUnion.",
+                                        "Placing and lifting a freeze is free by federal law.",
+                                        "It does not change your existing score."
+                                    ],
+                                    linkTitle: "FTC freeze portal",
+                                    urlString: "https://consumer.ftc.gov/articles/credit-freezes-and-fraud-alerts"
+                                )
+
+                                EducationGlassCard(
+                                    icon: "doc.text.fill",
+                                    title: "30-day dispute rights",
+                                    sourceCitation: "FCRA § 611 · 15 U.S.C. § 1681i",
+                                    summary: "After a written dispute, the bureau has 30 days to verify the debt or delete it.",
+                                    bullets: [
+                                        "Send Certified Mail with return receipt.",
+                                        "Include copies of ID and a utility bill.",
+                                        "Never send original documents."
+                                    ],
+                                    linkTitle: "CFPB dispute instructions",
+                                    urlString: "https://www.consumerfinance.gov/ask-cfpb/how-do-i-dispute-an-error-on-my-credit-report-en-314/"
+                                )
+
+                                EducationGlassCard(
+                                    icon: "heart.text.square.fill",
+                                    title: "Confidential help",
+                                    sourceCitation: "NDVH · NFCC",
+                                    summary: "Skip paid credit-repair shops. Non-profit counselors and hotlines are free and confidential.",
+                                    bullets: [
+                                        "Hotline: 1-800-799-7233 or text START to 88788.",
+                                        "NFCC offers free budget and debt advocacy.",
+                                        "Legal aid can help with coerced-debt cases."
+                                    ],
+                                    linkTitle: "Find an NFCC counselor",
+                                    urlString: "https://www.nfcc.org/"
+                                )
                             }
-                            Spacer()
-                            QuickExitButton()
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-
-                        // Card 1: Coerced Debt & Economic Abuse Rights (Highlighted Hero Card)
-                        EducationGlassCard(
-                            icon: "shield.lefthalf.filled",
-                            iconColor: Color.mosaicAccent,
-                            title: "Coerced Debt & Economic Abuse Protections",
-                            sourceCitation: "CFPB Guidance & State Protections (e.g., CA SB 975, NY, ME)",
-                            summary: "Coerced debt is any debt incurred through threat, force, fraud, or emotional duress—common in domestic and financial abuse. By law, debt obtained without voluntary consent can be legally disputed and separated.",
-                            bullets: [
-                                "Creditors and bureaus must review claims where signature cards or consent were involuntary.",
-                                "You can dispute authorized-user status and demand removal from accounts you didn't open.",
-                                "Mosaic's dispute drafts cite these exact statutory protections to safeguard your independence."
-                            ],
-                            linkTitle: "NNEDV Financial Abuse & Coerced Debt Guide",
-                            urlString: "https://nnedv.org/content/about-financial-abuse/"
-                        )
-
-                        // Card 2: Unlinking Joint Liability & Authorized Users
-                        EducationGlassCard(
-                            icon: "person.crop.circle.badge.minus",
-                            iconColor: Color.mosaicIndigo,
-                            title: "Unlinking Joint Accounts & Authorized Cards",
-                            sourceCitation: "Consumer Financial Protection Bureau (CFPB)",
-                            summary: "If an ex-partner added you as an authorized user or pressured you into a joint card and ran up balances, you have specific rights to protect your score.",
-                            bullets: [
-                                "Authorized Users: You have the legal right to contact the card issuer and request immediate removal.",
-                                "Once removed, the entire payment history and balance of that card must be deleted from your credit report.",
-                                "Joint Accounts: You can request account freezing or closure to prevent additional unauthorized charges."
-                            ],
-                            linkTitle: "CFPB Guide to Authorized User Removal",
-                            urlString: "https://www.consumerfinance.gov/ask-cfpb/am-i-responsible-for-debt-on-a-credit-card-account-if-i-am-only-an-authorized-user-en-1367/"
-                        )
-
-                        // Card 3: Credit Freezes
-                        EducationGlassCard(
-                            icon: "lock.shield.fill",
-                            iconColor: Color.mosaicTeal,
-                            title: "What a Credit Freeze Does (100% Free)",
-                            sourceCitation: "Federal Trade Commission (FTC) • Federal Law",
-                            summary: "A credit freeze blocks potential creditors from pulling your credit report, making it impossible for anyone—including an abusive partner or identity thief—to open new accounts in your name.",
-                            bullets: [
-                                "Must be requested separately at Equifax, Experian, and TransUnion (takes 5 mins each).",
-                                "Placing, temporarily lifting, and managing a freeze is 100% free by federal law.",
-                                "Does not affect your current credit score, job search, or existing accounts."
-                            ],
-                            linkTitle: "FTC Official Credit Freeze Portal",
-                            urlString: "https://consumer.ftc.gov/articles/credit-freezes-and-fraud-alerts"
-                        )
-
-                        // Card 4: How the 30-Day Dispute Process Works
-                        EducationGlassCard(
-                            icon: "doc.text.fill",
-                            iconColor: Color.mosaicAmber,
-                            title: "Your 30-Day Dispute Rights (FCRA § 611)",
-                            sourceCitation: "Fair Credit Reporting Act • 15 U.S.C. § 1681i",
-                            summary: "When you submit a written dispute, the credit bureau has 30 days to investigate with the furnisher and verify that the debt is legally yours. If they cannot verify it, they must delete it by law.",
-                            bullets: [
-                                "Always send disputes by Certified Mail with Return Receipt Requested to prove delivery date.",
-                                "Include copies of your photo ID and utility bill to verify your address.",
-                                "Never send original documents—keep your copies in a safe, private place."
-                            ],
-                            linkTitle: "CFPB Official Dispute Instructions",
-                            urlString: "https://www.consumerfinance.gov/ask-cfpb/how-do-i-dispute-an-error-on-my-credit-report-en-314/"
-                        )
-
-                        // Card 5: Free Non-Profit Counselors & Hotlines
-                        EducationGlassCard(
-                            icon: "heart.text.square.fill",
-                            iconColor: Color.mosaicRose,
-                            title: "Confidential Help & Non-Profit Counselors",
-                            sourceCitation: "National Domestic Violence Hotline & NFCC",
-                            summary: "Never pay upfront fees to commercial 'credit repair' agencies. Legitimate, non-profit credit counselors and domestic safety advocates provide free, confidential advice.",
-                            bullets: [
-                                "National Domestic Violence Hotline: Call 1-800-799-7233 or text 'START' to 88788 (24/7, Confidential).",
-                                "NFCC (National Foundation for Credit Counseling): Free budget reviews and debt advocacy.",
-                                "Legal Aid: Local civil legal assistance for victims of coerced debt and divorce separation."
-                            ],
-                            linkTitle: "Find a Non-Profit NFCC Counselor",
-                            urlString: "https://www.nfcc.org/"
-                        )
+                        .padding(.bottom, 128)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 96)
                 }
             }
             .navigationBarHidden(true)
@@ -115,7 +110,6 @@ struct LearnView: View {
 
 private struct EducationGlassCard: View {
     let icon: String
-    let iconColor: Color
     let title: String
     let sourceCitation: String
     let summary: String
@@ -124,59 +118,55 @@ private struct EducationGlassCard: View {
     let urlString: String
 
     var body: some View {
-        LiquidGlassCard(tint: iconColor, cornerRadius: 18, borderOpacity: 0.28, contentPadding: 16) {
+        LiquidGlassCard(cornerRadius: 24, contentPadding: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(iconColor.opacity(0.18))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: icon)
-                            .font(.system(size: 18))
-                            .foregroundColor(iconColor)
-                    }
-
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color.mosaicInk)
+                        .frame(width: 40, height: 40)
+                        .background(Color.mosaicFill)
+                        .clipShape(Circle())
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Text(sourceCitation)
-                            .font(.caption2)
-                            .foregroundColor(iconColor)
+                            .font(MosaicFont.medium(16))
+                            .foregroundColor(Color.mosaicInk)
+                        Text(sourceCitation.uppercased())
+                            .font(MosaicFont.medium(10))
+                            .tracking(0.5)
+                            .foregroundColor(Color.mosaicMuted)
                     }
-                    Spacer()
                 }
 
                 Text(summary)
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.9))
+                    .font(MosaicFont.regular(13))
+                    .foregroundColor(Color.mosaicSubtle)
                     .lineSpacing(3)
 
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(bullets, id: \.self) { bullet in
-                        HStack(alignment: .top, spacing: 6) {
-                            Text("•")
-                                .foregroundColor(iconColor)
-                                .font(.caption.bold())
+                        HStack(alignment: .top, spacing: 8) {
+                            Circle()
+                                .fill(Color.mosaicInk)
+                                .frame(width: 4, height: 4)
+                                .padding(.top, 6)
                             Text(bullet)
-                                .font(.caption)
+                                .font(MosaicFont.regular(12))
                                 .foregroundColor(Color.mosaicMuted)
                         }
                     }
                 }
 
-                Divider().background(Color.white.opacity(0.12))
-
                 if let url = URL(string: urlString) {
                     Link(destination: url) {
                         HStack {
                             Text(linkTitle)
-                                .font(.caption.bold())
-                                .foregroundColor(iconColor)
+                                .font(MosaicFont.medium(12))
+                                .foregroundColor(Color.mosaicInk)
                             Spacer()
                             Image(systemName: "arrow.up.right")
-                                .font(.caption2.bold())
-                                .foregroundColor(iconColor)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Color.mosaicMuted)
                         }
                     }
                 }

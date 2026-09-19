@@ -25,10 +25,10 @@ struct CompareView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Normalized Report Differences")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                            .font(MosaicFont.medium(18))
+                            .foregroundColor(Color.mosaicInk)
                         Text("Current (March 2026) vs Prior (December 2025)")
-                            .font(.caption)
+                            .font(MosaicFont.regular(12))
                             .foregroundColor(Color.mosaicMuted)
                     }
                     Spacer()
@@ -49,7 +49,7 @@ struct CompareView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.mosaicNavy)
+            .background(Color.mosaicPage)
 
             if let feedback = createdPacketFeedback {
                 HStack(spacing: 8) {
@@ -57,7 +57,7 @@ struct CompareView: View {
                         .foregroundColor(Color.mosaicTeal)
                     Text(feedback)
                         .font(.caption.bold())
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.mosaicInk)
                     Spacer()
                 }
                 .padding(12)
@@ -104,7 +104,7 @@ struct CompareView: View {
                 .padding(16)
             }
         }
-        .background(Color.mosaicNavy.ignoresSafeArea())
+        .background(Color.mosaicPage.ignoresSafeArea())
         .navigationTitle("Change Inbox")
         .navigationBarTitleDisplayMode(.inline)
     }

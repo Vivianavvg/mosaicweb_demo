@@ -18,7 +18,6 @@ struct MainTabView: View {
         self.user = user
         self.onLogout = onLogout
         self.webAuth = webAuth
-
         UITabBar.appearance().isHidden = true
     }
 
@@ -27,171 +26,51 @@ struct MainTabView: View {
             TabView(selection: $selectedTab) {
                 OverviewView(selectedTab: $selectedTab)
                     .tag(0)
-
                 ScanView()
                     .tag(1)
-
                 RecoveryView()
                     .tag(2)
-
                 LearnView()
                     .tag(3)
-
                 SettingsView(onLogout: onLogout)
                     .tag(4)
             }
 
-            // Frosted Floating Liquid Glass Tab Bar
-            HStack(spacing: 4) {
-                LiquidGlassTabButton(
-                    icon: "house.fill",
-                    title: "Overview",
-                    isSelected: selectedTab == 0
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        selectedTab = 0
-                    }
-                }
-
-                LiquidGlassTabButton(
-                    icon: "doc.viewfinder.fill",
-                    title: "Scan",
-                    isSelected: selectedTab == 1
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        selectedTab = 1
-                    }
-                }
-
-                LiquidGlassTabButton(
-                    icon: "shield.lefthalf.filled",
-                    title: "Recovery",
-                    isSelected: selectedTab == 2
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        selectedTab = 2
-                    }
-                }
-
-                LiquidGlassTabButton(
-                    icon: "book.fill",
-                    title: "Learn",
-                    isSelected: selectedTab == 3
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        selectedTab = 3
-                    }
-                }
-
-                LiquidGlassTabButton(
-                    icon: "gearshape.fill",
-                    title: "Settings",
-                    isSelected: selectedTab == 4
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        selectedTab = 4
-                    }
-                }
+            HStack(spacing: 0) {
+                tabButton(icon: "house.fill", outline: "house", index: 0)
+                tabButton(icon: "chart.bar.fill", outline: "chart.bar", index: 1)
+                tabButton(icon: "arrow.left.arrow.right", outline: "arrow.left.arrow.right", index: 2)
+                tabButton(icon: "book.fill", outline: "book", index: 3)
+                tabButton(icon: "gearshape.fill", outline: "gearshape", index: 4)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(.ultraThinMaterial)
-
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.mosaicNavy.opacity(0.4),
-                                    Color.mosaicNavy.opacity(0.65)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: Color.white.opacity(0.45), location: 0),
-                                    .init(color: Color.mosaicAccent.opacity(0.3), location: 0.35),
-                                    .init(color: Color.white.opacity(0.12), location: 0.8),
-                                    .init(color: Color.white.opacity(0.25), location: 1.0)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 6)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            .padding(.vertical, 10)
+            .liquidGlass(cornerRadius: 32, shadowRadius: 20)
+            .padding(.horizontal, 28)
+            .padding(.bottom, 10)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
-}
 
-private struct LiquidGlassTabButton: View {
-    let icon: String
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: isSelected ? .bold : .medium))
-                    .foregroundColor(isSelected ? Color.mosaicAccent : Color.mosaicMuted)
-
-                Text(title)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? .white : Color.mosaicMuted)
+    private func tabButton(icon: String, outline: String, index: Int) -> some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.18)) {
+                selectedTab = index
+            }
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: selectedTab == index ? icon : outline)
+                    .font(.system(size: 18, weight: selectedTab == index ? .semibold : .regular))
+                    .foregroundColor(selectedTab == index ? Color.mosaicInk : Color.mosaicMuted)
+                Circle()
+                    .fill(selectedTab == index ? Color.mosaicInk : Color.clear)
+                    .frame(width: 4, height: 4)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
-            .background(
-                Group {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.mosaicAccent.opacity(0.22),
-                                        Color.mosaicAccent.opacity(0.06)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.mosaicAccent.opacity(0.5),
-                                                Color.mosaicAccent.opacity(0.15)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        ),
-                                        lineWidth: 1
-                                    )
-                            )
-                    } else {
-                        Color.clear
-                    }
-                }
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(["Overview", "Scan", "Recovery", "Learn", "Settings"][index])
     }
 }
-

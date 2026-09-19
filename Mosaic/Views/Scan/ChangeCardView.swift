@@ -19,7 +19,7 @@ struct ChangeCardView: View {
                 HStack {
                     Text(item.changeType.displayName)
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.mosaicInk)
 
                     Spacer()
 
@@ -50,7 +50,7 @@ struct ChangeCardView: View {
                             .padding(.top, 2)
                         Text(delta)
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.85))
+                            .foregroundColor(Color.mosaicSubtle)
                     }
                 }
 
@@ -74,7 +74,7 @@ struct ChangeCardView: View {
                         .font(.caption)
                         .foregroundColor(Color.mosaicMuted)
                         .padding(10)
-                        .background(Color.black.opacity(0.25))
+                        .background(Color.mosaicFill)
                         .cornerRadius(8)
                 }
 
@@ -144,16 +144,10 @@ struct ChangeCardView: View {
                                 Text("Generate My Legal Dispute Packet")
                             }
                             .font(.subheadline.bold())
-                            .foregroundColor(Color.mosaicNavy)
+                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.mosaicAccent, Color.mosaicRoseGold],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
+                            .background(Color.mosaicInk)
                             .cornerRadius(10)
                         }
                     }
@@ -209,11 +203,11 @@ private struct ClassificationButton: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
                         .font(.caption.weight(isSelected ? .bold : .medium))
-                        .foregroundColor(isSelected ? .white : Color.mosaicMuted)
+                        .foregroundColor(isSelected ? Color.mosaicInk : Color.mosaicMuted)
                     if let subtitle = subtitle {
                         Text(subtitle)
                             .font(.system(size: 9))
-                            .foregroundColor(isSelected ? Color.white.opacity(0.8) : Color.mosaicMuted.opacity(0.7))
+                            .foregroundColor(isSelected ? Color.mosaicSubtle : Color.mosaicMuted.opacity(0.7))
                     }
                 }
 
@@ -221,7 +215,7 @@ private struct ClassificationButton: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.mosaicAccent.opacity(0.18) : Color.white.opacity(0.04))
+            .background(isSelected ? Color.mosaicFill : Color.mosaicPage)
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)

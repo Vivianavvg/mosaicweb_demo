@@ -14,7 +14,7 @@ struct PrivacyNoticeSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Privacy & Safety Notice")
                                 .font(.title2.bold())
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.mosaicInk)
                             Text("How Mosaic protects your information")
                                 .font(.subheadline)
                                 .foregroundColor(Color.mosaicMuted)
@@ -56,7 +56,7 @@ struct PrivacyNoticeSheet: View {
                 }
                 .padding(24)
             }
-            .background(Color.mosaicNavy.ignoresSafeArea())
+            .background(Color.mosaicPage.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -86,7 +86,7 @@ private struct NoticeSection: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                 Text(description)
                     .font(.subheadline)
                     .foregroundColor(Color.mosaicMuted)

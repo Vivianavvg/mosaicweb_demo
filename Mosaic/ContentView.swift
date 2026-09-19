@@ -26,32 +26,31 @@ struct ContentView: View {
             if isLoading {
                 SplashView()
             } else if appState.isAppLocked {
-                // App Lock Barrier
-                VStack(spacing: 20) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 64))
-                        .foregroundColor(Color.mosaicAccent)
+                ZStack {
+                    LiquidGlassBackground()
+                    VStack(spacing: 18) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(Color.mosaicInk)
+                            .frame(width: 64, height: 64)
+                            .liquidGlass(cornerRadius: 32, shadowRadius: 12)
 
-                    Text("Mosaic is Locked")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
+                        Text("Mosaic is locked")
+                            .font(MosaicFont.medium(28))
+                            .foregroundColor(Color.mosaicInk)
 
-                    Text("Unlock with Face ID or your device passcode")
-                        .font(.subheadline)
-                        .foregroundColor(Color.mosaicMuted)
+                        Text("Unlock with Face ID or your device passcode")
+                            .font(MosaicFont.regular(14))
+                            .foregroundColor(Color.mosaicMuted)
 
-                    Button("Unlock Now") {
-                        appState.requestUnlock()
+                        MosaicPrimaryButton(title: "Unlock now") {
+                            appState.requestUnlock()
+                        }
                     }
-                    .font(.headline)
-                    .foregroundColor(Color.mosaicNavy)
+                    .padding(28)
+                    .liquidGlass(cornerRadius: 32, shadowRadius: 18)
                     .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
-                    .background(Color.mosaicAccent)
-                    .cornerRadius(12)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.mosaicNavy.ignoresSafeArea())
             } else if appState.isAuthenticated {
                 MainTabView(
                     user: user,

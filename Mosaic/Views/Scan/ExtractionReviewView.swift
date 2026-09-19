@@ -24,7 +24,7 @@ struct ExtractionReviewView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.mosaicNavy)
+            .background(Color.mosaicPage)
 
             ScrollView {
                 VStack(spacing: 14) {
@@ -57,10 +57,10 @@ struct ExtractionReviewView: View {
                             Image(systemName: "arrow.right")
                         }
                         .font(.headline)
-                        .foregroundColor(Color.mosaicNavy)
+                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.mosaicAccent)
+                        .background(Color.mosaicInk)
                         .cornerRadius(12)
                     }
                     .padding(.top, 12)
@@ -68,7 +68,7 @@ struct ExtractionReviewView: View {
                 .padding(16)
             }
         }
-        .background(Color.mosaicNavy.ignoresSafeArea())
+        .background(Color.mosaicPage.ignoresSafeArea())
         .navigationTitle("Extracted Facts Review")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editingAccount) { acc in
@@ -155,7 +155,7 @@ private struct AccountCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(account.issuerName)
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.mosaicInk)
                     Text("Account: **** \(account.accountLast4) • \(account.accountType)")
                         .font(.caption)
                         .foregroundColor(Color.mosaicMuted)
@@ -207,7 +207,7 @@ private struct InquiryCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(inquiry.inquirerName)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                 if let date = inquiry.inquiryDate {
                     Text("Date Reported: \(date)")
                         .font(.caption)
@@ -242,7 +242,7 @@ private struct AddressCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(address.redactedAddressLabel)
                     .font(.subheadline.weight(.medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                 if let date = address.reportedDate {
                     Text("Reported Date: \(date)")
                         .font(.caption)
@@ -275,7 +275,7 @@ private struct InfoColumn: View {
                 .foregroundColor(Color.mosaicMuted)
             Text(value)
                 .font(.caption.bold())
-                .foregroundColor(.white)
+                .foregroundColor(Color.mosaicInk)
         }
     }
 }

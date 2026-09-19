@@ -23,7 +23,7 @@ struct DeadlineTrackerView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.mosaicNavy)
+            .background(Color.mosaicPage)
 
             ScrollView {
                 VStack(spacing: 14) {
@@ -49,7 +49,7 @@ struct DeadlineTrackerView: View {
                 .padding(16)
             }
         }
-        .background(Color.mosaicNavy.ignoresSafeArea())
+        .background(Color.mosaicPage.ignoresSafeArea())
         .navigationTitle("Deadline & Status Tracker")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -72,7 +72,7 @@ private struct TaskRowCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
                         .font(.headline)
-                        .foregroundColor(task.isCompleted ? Color.mosaicMuted : .white)
+                        .foregroundColor(task.isCompleted ? Color.mosaicMuted : Color.mosaicInk)
                         .strikethrough(task.isCompleted)
 
                     HStack(spacing: 8) {
@@ -121,7 +121,7 @@ private struct TaskRowCard: View {
                 if !task.notes.isEmpty {
                     Text("Notes: \(task.notes)")
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(Color.mosaicSubtle)
                         .padding(.top, 2)
                 }
 

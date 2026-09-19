@@ -20,7 +20,7 @@ struct InteractiveChecklistView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Label("Dispute Evidence Gathering", systemImage: "folder.fill.badge.plus")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.mosaicInk)
 
                     Text("Keep copies of all records you send. Credit bureaus require positive identification before investigating.")
                         .font(.caption)
@@ -45,7 +45,7 @@ struct InteractiveChecklistView: View {
                     HStack {
                         Label("Three-Bureau Security Freezes", systemImage: "lock.shield.fill")
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.mosaicInk)
                         Spacer()
                         Text("100% Free by Law")
                             .font(.caption2.bold())
@@ -88,7 +88,7 @@ struct InteractiveChecklistView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Placed 1-Year Fraud Alert")
                                 .font(.subheadline.bold())
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.mosaicInk)
                             Text("Notifying one bureau automatically notifies the other two")
                                 .font(.caption2)
                                 .foregroundColor(Color.mosaicMuted)
@@ -103,7 +103,7 @@ struct InteractiveChecklistView: View {
             }
             .padding(16)
         }
-        .background(Color.mosaicNavy.ignoresSafeArea())
+        .background(Color.mosaicPage.ignoresSafeArea())
         .navigationTitle("Evidence & Freeze Checklist")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -122,13 +122,13 @@ private struct ChecklistRow: View {
 
                 Text(text)
                     .font(.caption)
-                    .foregroundColor(isOn ? .white : Color.mosaicMuted)
+                    .foregroundColor(isOn ? Color.mosaicInk : Color.mosaicMuted)
                     .multilineTextAlignment(.leading)
 
                 Spacer()
             }
             .padding(10)
-            .background(Color.white.opacity(0.03))
+            .background(Color.mosaicFill)
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
@@ -147,7 +147,7 @@ private struct FreezeInputCard: View {
             HStack {
                 Text(bureauName)
                     .font(.subheadline.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
                 Spacer()
                 if let url = URL(string: urlString) {
                     Link(destination: url) {
@@ -173,13 +173,13 @@ private struct FreezeInputCard: View {
                     .font(.caption)
                     .textFieldStyle(.plain)
                     .padding(6)
-                    .background(Color.black.opacity(0.25))
+                    .background(Color.mosaicFill)
                     .cornerRadius(6)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.mosaicInk)
             }
         }
         .padding(10)
-        .background(Color.white.opacity(0.04))
+        .background(Color.mosaicFill)
         .cornerRadius(10)
     }
 }
