@@ -208,8 +208,7 @@ struct OverviewView: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(suggestedQuestions, id: \.self) { question in
                     Button {
-                        prompt = question
-                        isPromptFocused = true
+                        chooseSuggestion(question)
                     } label: {
                         HStack(spacing: 7) {
                             Image(systemName: "arrow.up.right")
@@ -221,9 +220,16 @@ struct OverviewView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityHint("Puts this question in the Ask Mosaic message field")
                 }
             }
         }
+    }
+
+    private func chooseSuggestion(_ question: String) {
+        prompt = question
+        assistantReply = nil
+        isPromptFocused = true
     }
 
     private var suggestedQuestions: [String] {
