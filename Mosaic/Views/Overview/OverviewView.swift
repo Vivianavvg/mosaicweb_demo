@@ -15,15 +15,10 @@ struct OverviewView: View {
     @State private var isImporting = false
     @State private var isClassifying = false
     @State private var showMoreReviewOptions = false
-    @State private var showComposer = false
     @FocusState private var isPromptFocused: Bool
 
     private var pendingItems: [ChangeItem] {
         appState.changeItems.filter { $0.classification == nil }
-    }
-
-    private var reviewedItemCount: Int {
-        appState.changeItems.count - pendingItems.count
     }
 
     private var currentReviewItem: ChangeItem? {
@@ -81,9 +76,7 @@ struct OverviewView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if currentReviewItem == nil || showComposer || !lastUserPrompt.isEmpty {
-                composer
-            }
+            composer
         }
         .fileImporter(
             isPresented: $showFileImporter,
@@ -102,31 +95,23 @@ struct OverviewView: View {
     }
 
     private var reportMetric: some View {
-        VStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Your credit report")
-                .font(MosaicFont.medium(27))
+                .font(MosaicFont.medium(22))
                 .foregroundColor(Color.mosaicInk)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text("\(pendingItems.count)")
-                .font(MosaicFont.medium(54))
-                .foregroundColor(Color.mosaicInk)
-                .monospacedDigit()
-
-            Text(pendingItems.count == 1 ? "CHANGE LEFT TO REVIEW" : "CHANGES LEFT TO REVIEW")
-                .font(MosaicFont.medium(11))
-                .tracking(1.2)
-                .foregroundColor(Color.mosaicSubtle)
-
-            if reviewedItemCount > 0 {
-                Text("\(reviewedItemCount) reviewed")
-                    .font(MosaicFont.regular(12))
-                    .foregroundColor(Color.mosaicSubtle)
-            }
 
             netDebtIndicator
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(pendingItems.count)")
+                    .font(MosaicFont.medium(22))
+                    .foregroundColor(Color.mosaicInk)
+                    .monospacedDigit()
+                Text(pendingItems.count == 1 ? "change left to review" : "changes left to review")
+                    .font(MosaicFont.regular(13))
+                    .foregroundColor(Color.mosaicSubtle)
+            }
         }
-        .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.top, 30)
         .padding(.bottom, 22)
@@ -141,15 +126,21 @@ struct OverviewView: View {
             let icon = isAdded ? "arrow.up.right" : (isReduced ? "arrow.down.right" : "arrow.right")
             let label = isAdded ? "Net debt added" : (isReduced ? "Net debt reduced" : "No net debt change")
 
-            HStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
-                Text(label)
-                    .font(MosaicFont.medium(12))
-                Text(formattedCurrency(cents: abs(deltaCents)))
-                    .font(MosaicFont.medium(12))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(indicatorColor)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(formattedCurrency(cents: abs(deltaCents)))
+                        .font(MosaicFont.medium(48))
+                        .foregroundColor(Color.mosaicInk)
+                        .monospacedDigit()
+                    Text(label.uppercased())
+                        .font(MosaicFont.medium(11))
+                        .tracking(1.1)
+                        .foregroundColor(Color.mosaicSubtle)
+                }
             }
-            .foregroundColor(indicatorColor)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(label), \(formattedCurrency(cents: abs(deltaCents)))")
         }
@@ -443,7 +434,6 @@ struct OverviewView: View {
     private func chooseSuggestion(_ question: String) {
         prompt = question
         assistantReply = nil
-        showComposer = true
         isPromptFocused = true
     }
 
@@ -510,11 +500,17 @@ struct OverviewView: View {
             .accessibilityLabel("Send message")
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 5)
-        .liquidGlass(tint: Color.white.opacity(0.92), cornerRadius: 24, shadowRadius: 0)
+        .padding(.vertical, 9)
+        .liquidGlass(
+            tint: Color.white.opacity(0.18),
+            cornerRadius: 28,
+            borderOpacity: 0.86,
+            material: .ultraThinMaterial,
+            shadowRadius: 0
+        )
         .padding(.horizontal, 16)
-        .padding(.top, 5)
-        .padding(.bottom, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
         .background(.clear)
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded { isPromptFocused = true })
