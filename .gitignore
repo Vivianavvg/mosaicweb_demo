@@ -1,0 +1,13 @@
+.DS_Store
+xcuserdata/
+*.xcuserstate
+build/
+DerivedData/
+.swiftpm/
+
+# Secret credentials & local environment files
+*Secrets.plist
+!*Secrets.example.plist
+.env
+.env.local
+node_modules/

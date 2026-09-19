@@ -1,0 +1,14 @@
+{
+  "name": "mosaic-api-server",
+  "version": "1.0.0",
+  "description": "Mosaic Credit Health Backend with Tiger Data and Gemini 3.6 Flash",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  }
+}
