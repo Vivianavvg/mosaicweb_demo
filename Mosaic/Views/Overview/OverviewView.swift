@@ -471,29 +471,17 @@ struct OverviewView: View {
 
     private var composer: some View {
         HStack(alignment: .center, spacing: 10) {
-            ZStack(alignment: .leading) {
-                if prompt.isEmpty {
-                    Text("Ask Mosaic…")
-                        .font(MosaicFont.regular(14))
-                        .foregroundColor(Color.mosaicSubtle)
-                        .allowsHitTesting(false)
-                }
-
-                TextField("", text: $prompt, axis: .vertical)
-                    .font(MosaicFont.regular(15))
-                    .foregroundColor(Color.mosaicInk)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(1...2)
-                    .focused($isPromptFocused)
-                    .submitLabel(.send)
-                    .textInputAutocapitalization(.sentences)
-                    .textFieldStyle(.plain)
-                    .onSubmit(submitPrompt)
-                    .onTapGesture { isPromptFocused = true }
-            }
+            TextField("Ask Mosaic…", text: $prompt, axis: .vertical)
+                .font(MosaicFont.regular(15))
+                .foregroundColor(Color.mosaicInk)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1...2)
+                .focused($isPromptFocused)
+                .submitLabel(.send)
+                .textInputAutocapitalization(.sentences)
+                .textFieldStyle(.plain)
+                .onSubmit(submitPrompt)
             .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture { isPromptFocused = true }
 
             Button(action: submitPrompt) {
                 Image(systemName: "arrow.up.circle.fill")
@@ -520,8 +508,6 @@ struct OverviewView: View {
         .padding(.top, 8)
         .padding(.bottom, 10)
         .background(.clear)
-        .contentShape(Rectangle())
-        .simultaneousGesture(TapGesture().onEnded { isPromptFocused = true })
     }
 
     private func submitPrompt() {
