@@ -89,7 +89,7 @@ struct PacketDetailView: View {
             .padding(.top, 8)
             .padding(.bottom, 28)
         }
-        .background(Color.mosaicPage.ignoresSafeArea())
+        .background(MosaicPageBackground(opacity: 0.3))
         .hidesFloatingTabBar()
         .navigationTitle("This letter")
         .navigationBarTitleDisplayMode(.inline)

@@ -50,7 +50,7 @@ struct RecoveryView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
-            .background(Color.white.ignoresSafeArea())
+            .background(MosaicPageBackground(opacity: 0.3))
             .navigationTitle("Your letters")
             .navigationBarTitleDisplayMode(.large)
         }

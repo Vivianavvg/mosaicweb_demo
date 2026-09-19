@@ -27,7 +27,7 @@ struct ScanView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mosaicPage.ignoresSafeArea()
+                MosaicPageBackground(opacity: 0.3)
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {

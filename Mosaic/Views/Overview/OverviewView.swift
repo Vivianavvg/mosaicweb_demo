@@ -31,6 +31,7 @@ struct OverviewView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
+                    reportMetric
                     header
 
                     if appState.isDemoMode {
@@ -127,6 +128,46 @@ struct OverviewView: View {
         .task(id: appState.changeItems.count) {
             await refreshAssistantSummary()
         }
+    }
+
+    private var reportMetric: some View {
+        VStack(spacing: 5) {
+            Text("\(appState.changeItems.count)")
+                .font(MosaicFont.medium(54))
+                .foregroundColor(Color.mosaicInk)
+                .monospacedDigit()
+
+            Text("CHANGES TO REVIEW")
+                .font(MosaicFont.medium(11))
+                .tracking(1.2)
+                .foregroundColor(Color.mosaicSubtle)
+
+            HStack(spacing: 18) {
+                metricIndicator(icon: "rectangle.stack.fill", label: "Review", value: appState.changeItems.count)
+                metricIndicator(icon: "arrow.right.circle.fill", label: "Next", value: openTaskCount)
+                metricIndicator(icon: "checkmark.circle.fill", label: "Saved", value: appState.savedItems.count)
+            }
+            .padding(.top, 12)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 30)
+        .padding(.bottom, 26)
+    }
+
+    private func metricIndicator(icon: String, label: String, value: Int) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(Color.mosaicViolet)
+            Text(label)
+                .font(MosaicFont.medium(11))
+                .foregroundColor(Color.mosaicInk)
+            Text("\(value)")
+                .font(MosaicFont.regular(11))
+                .foregroundColor(Color.mosaicSubtle)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(value)")
     }
 
     private var header: some View {

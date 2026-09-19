@@ -12,7 +12,7 @@ struct WelcomeView: View {
 
     var body: some View {
         ZStack {
-            Color.mosaicPage.ignoresSafeArea()
+            MosaicPageBackground(opacity: 0.3)
 
             VStack(alignment: .leading, spacing: 0) {
                 Image("MosaicLogo")
