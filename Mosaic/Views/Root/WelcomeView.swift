@@ -3,7 +3,6 @@ import SwiftUI
 struct WelcomeView: View {
     @EnvironmentObject private var appState: AppState
     let onLogin: () -> Void
-    let onDemo: () -> Void
     let isAuthenticating: Bool
     let authErrorMessage: String?
 
@@ -66,23 +65,6 @@ struct WelcomeView: View {
                     }
                     .buttonStyle(.liquidGlass(tint: Color.mosaicViolet, isProminent: true))
                     .disabled(isAuthenticating)
-
-                    Button(action: onDemo) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                            Text("Try a private sample")
-                                .font(MosaicFont.medium(15))
-                        }
-                        .foregroundColor(Color.mosaicViolet)
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.liquidGlass(tint: Color.mosaicLavender))
-
-                    Text("Uses clearly labeled synthetic data on this device. It is not your credit report.")
-                        .font(MosaicFont.regular(11))
-                        .foregroundColor(Color.mosaicSubtle)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .multilineTextAlignment(.center)
 
                     Button { showPrivacyNotice = true } label: {
                         Text("How Mosaic protects your privacy")

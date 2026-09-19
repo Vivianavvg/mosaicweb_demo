@@ -62,7 +62,6 @@ struct ContentView: View {
             } else {
                 WelcomeView(
                     onLogin: { login() },
-                    onDemo: { startDemo() },
                     isAuthenticating: isAuthenticating,
                     authErrorMessage: authErrorMessage
                 )
@@ -78,10 +77,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            if CommandLine.arguments.contains("--demo") {
-                startDemo()
-                return
-            }
             guard credentialsManager.canRenew() else {
                 isLoading = false
                 return
@@ -137,11 +132,6 @@ struct ContentView: View {
                 print("Auth0 Login failed: \(error)")
             }
         }
-    }
-
-    private func startDemo() {
-        appState.startDemoMode()
-        isLoading = false
     }
 
     private func logout() {
