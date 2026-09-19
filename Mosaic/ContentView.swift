@@ -77,6 +77,18 @@ struct ContentView: View {
             }
         }
         .onAppear {
+#if DEBUG
+            if let importArgument = CommandLine.arguments.first(where: { $0.hasPrefix("--import-file=") }) {
+                let prefix = "--import-file="
+                let path = String(importArgument.dropFirst(prefix.count))
+                appState.isAuthenticated = true
+                isLoading = false
+                Task { @MainActor in
+                    _ = try? await appState.importCreditReport(from: URL(fileURLWithPath: path))
+                }
+                return
+            }
+#endif
             guard credentialsManager.canRenew() else {
                 isLoading = false
                 return
