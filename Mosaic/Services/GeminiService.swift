@@ -13,23 +13,33 @@ public final class GeminiService {
     public func generateOverviewSummary(changeItems: [ChangeItem], openTaskCount: Int) async -> String {
         let categories = changeItems.prefix(6).map { $0.changeType.displayName }.joined(separator: ", ")
         let prompt = """
-        Write one calm, plain-language sentence for a credit-report review dashboard.
-        Say what the user should look at next without claiming fraud, abuse, identity theft, or coercion.
+        Write exactly three short, calm, plain-language sentences for a credit-report review dashboard.
+        Sentence one: summarize the report at a high level. Sentence two: say what the user should look at next.
+        Sentence three: say how Mosaic can help. Do not claim fraud, abuse, identity theft, or coercion.
         Use only these redacted facts: \(changeItems.count) report changes, \(openTaskCount) open tasks, categories: \(categories.isEmpty ? "none yet" : categories).
-        Do not use a greeting, markdown, legal advice, or a promise of an outcome.
+        Do not use a greeting, markdown, legal advice, or a promise of an outcome. Keep each sentence under 18 words.
         """
 
         if let aiText = try? await callGemini(prompt: prompt), !aiText.isEmpty {
-            return aiText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return capOverviewSummary(aiText)
         }
 
         if changeItems.isEmpty {
-            return "Your report workspace is ready. Import or review a report when you are ready."
+            return "Your report workspace is ready. Import a report to see the changes that matter. Mosaic will explain what to review next."
         }
-        if openTaskCount == 0 {
-            return "You have \(changeItems.count) change\(changeItems.count == 1 ? "" : "s") to review and no open follow-up tasks."
-        }
-        return "You have \(changeItems.count) change\(changeItems.count == 1 ? "" : "s") to review and \(openTaskCount) next step\(openTaskCount == 1 ? "" : "s") waiting for you."
+        return "Your report has \(changeItems.count) change\(changeItems.count == 1 ? "" : "s") to review. Start with the highest-priority change and its source page. Mosaic will help you decide what to save, revisit, or draft."
+    }
+
+    private func capOverviewSummary(_ text: String) -> String {
+        let sentences = text
+            .replacingOccurrences(of: "\n", with: " ")
+            .split { $0 == "." || $0 == "!" || $0 == "?" }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .prefix(3)
+
+        guard !sentences.isEmpty else { return "" }
+        return sentences.map { "\($0)." }.joined(separator: " ")
     }
 
     /// Gives each review card one short, neutral next step using only redacted report facts.

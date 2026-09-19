@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
 
-    @State private var assistantSummary = "Upload a credit report PDF to get started. Mosaic will read it on-device, explain each change, and help you decide what to review next."
+    @State private var assistantSummary = "Your report workspace is ready. Import a report to see the changes that matter. Mosaic will explain what to review next."
     @State private var assistantReply: String?
     @State private var lastUserPrompt = ""
     @State private var prompt = ""
@@ -47,19 +47,6 @@ struct OverviewView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     reportMetric
-                    header
-
-                    if appState.isDemoMode {
-                        HStack(alignment: .top, spacing: 10) {
-                            SyntheticBadge()
-                            Text("Sample data only — not your credit report.")
-                                .font(MosaicFont.regular(12))
-                                .foregroundColor(Color.mosaicSubtle)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 14)
-                    }
 
                     VStack(alignment: .leading, spacing: 22) {
                         if !lastUserPrompt.isEmpty {
@@ -67,21 +54,8 @@ struct OverviewView: View {
                         }
 
                         if lastUserPrompt.isEmpty {
+                            summarySection
                             nextStepSection
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Mosaic's read")
-                                    .font(MosaicFont.medium(12))
-                                    .tracking(0.6)
-                                    .foregroundColor(Color.mosaicSubtle)
-
-                                Text(assistantSummary)
-                                    .font(MosaicFont.regular(16))
-                                    .foregroundColor(Color.mosaicInk)
-                                    .lineSpacing(4)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
                         } else if let assistantReply, !assistantReply.isEmpty {
                             Text(assistantReply)
                                 .font(MosaicFont.regular(17))
@@ -129,6 +103,11 @@ struct OverviewView: View {
 
     private var reportMetric: some View {
         VStack(spacing: 5) {
+            Text("Your credit report")
+                .font(MosaicFont.medium(27))
+                .foregroundColor(Color.mosaicInk)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             Text("\(pendingItems.count)")
                 .font(MosaicFont.medium(54))
                 .foregroundColor(Color.mosaicInk)
@@ -144,25 +123,78 @@ struct OverviewView: View {
                     .font(MosaicFont.regular(12))
                     .foregroundColor(Color.mosaicSubtle)
             }
+
+            netDebtIndicator
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
         .padding(.top, 30)
         .padding(.bottom, 22)
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("Your money, one step at a time")
-                .font(MosaicFont.medium(28))
-                .foregroundColor(Color.mosaicInk)
-            Text("Mosaic turns a credit report into one clear decision at a time.")
-                .font(MosaicFont.regular(15))
-                .foregroundColor(Color.mosaicSubtle)
-                .fixedSize(horizontal: false, vertical: true)
+    @ViewBuilder
+    private var netDebtIndicator: some View {
+        if let deltaCents = netBalanceDeltaCents {
+            let isAdded = deltaCents > 0
+            let isReduced = deltaCents < 0
+            let indicatorColor = isAdded ? Color.red : (isReduced ? Color.green : Color.mosaicSubtle)
+            let icon = isAdded ? "arrow.up.right" : (isReduced ? "arrow.down.right" : "arrow.right")
+            let label = isAdded ? "Net debt added" : (isReduced ? "Net debt reduced" : "No net debt change")
+
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .bold))
+                Text(label)
+                    .font(MosaicFont.medium(12))
+                Text(formattedCurrency(cents: abs(deltaCents)))
+                    .font(MosaicFont.medium(12))
+            }
+            .foregroundColor(indicatorColor)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(label), \(formattedCurrency(cents: abs(deltaCents)))")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
+    }
+
+    private var netBalanceDeltaCents: Int? {
+        guard let currentSnapshot = appState.currentSnapshot,
+              let priorSnapshot = appState.priorSnapshot else {
+            return nil
+        }
+
+        let priorBalances = Dictionary(
+            priorSnapshot.accounts.map { ($0.localFingerprint, $0.balanceCents ?? 0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let deltas = currentSnapshot.accounts.compactMap { account -> Int? in
+            guard let currentBalance = account.balanceCents else { return nil }
+            return currentBalance - (priorBalances[account.localFingerprint] ?? 0)
+        }
+
+        return deltas.isEmpty ? nil : deltas.reduce(0, +)
+    }
+
+    private func formattedCurrency(cents: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencySymbol = "$"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: Double(cents) / 100.0)) ?? "$0"
+    }
+
+    private var summarySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Mosaic summary")
+                .font(MosaicFont.medium(12))
+                .tracking(0.6)
+                .foregroundColor(Color.mosaicSubtle)
+
+            Text(assistantSummary)
+                .font(MosaicFont.regular(16))
+                .foregroundColor(Color.mosaicInk)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     @ViewBuilder
@@ -178,19 +210,12 @@ struct OverviewView: View {
 
     private func reviewStepCard(for item: ChangeItem) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("YOUR NEXT STEP")
-                        .font(MosaicFont.medium(11))
-                        .tracking(1.1)
-                        .foregroundColor(Color.mosaicViolet)
-                    Text("Review one change")
-                        .font(MosaicFont.medium(22))
-                        .foregroundColor(Color.mosaicInk)
-                }
-
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(item.changeType.displayName)
+                    .font(MosaicFont.medium(18))
+                    .foregroundColor(Color.mosaicInk)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 12)
-
                 Text("\(pendingItems.count) left")
                     .font(MosaicFont.medium(12))
                     .foregroundColor(Color.mosaicViolet)
@@ -201,9 +226,6 @@ struct OverviewView: View {
             }
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(item.changeType.displayName)
-                    .font(MosaicFont.medium(15))
-                    .foregroundColor(Color.mosaicInk)
                 Text(item.summary)
                     .font(MosaicFont.regular(15))
                     .foregroundColor(Color.mosaicSubtle)
@@ -511,12 +533,12 @@ struct OverviewView: View {
 
     private var localSummary: String {
         if appState.changeItems.isEmpty {
-            return "Upload a credit report PDF to get started. Mosaic will read it on-device, explain each change, and help you decide what to review next."
+            return "Your report workspace is ready. Import a report to see the changes that matter. Mosaic will explain what to review next."
         }
         if pendingItems.isEmpty {
-            return "You have reviewed every change in this report. Ask Mosaic a question or revisit your follow-up tasks when you are ready."
+            return "You reviewed every change in this report. Ask Mosaic a question or revisit a follow-up task. Mosaic keeps the next decision clear."
         }
-        return "You have \(pendingItems.count) change\(pendingItems.count == 1 ? "" : "s") left. Start with the guided choice above, then Mosaic will take the next step with you."
+        return "You have \(pendingItems.count) change\(pendingItems.count == 1 ? "" : "s") left to review. Start with the guided choice below and check its source page. Mosaic will help you decide what to save, revisit, or draft."
     }
 
     private func submitPrompt() {
