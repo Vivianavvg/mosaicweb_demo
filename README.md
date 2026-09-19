@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Privacy-first credit health for iPhone.</strong><br>
-  Import a report, see what changed, and keep the next step in your control.
+  <strong>A normal, discreet reason to check your credit.</strong><br>
+  Mosaic turns an unfamiliar change into an organized, source-linked recovery plan without deciding what happened for you.
 </p>
 
 <p align="center">
@@ -19,6 +19,8 @@
 </p>
 
 <p align="center">
+  <a href="#product-preview">Preview</a>
+  &nbsp;·&nbsp;
   <a href="#tech-stack">Tech stack</a>
   &nbsp;·&nbsp;
   <a href="#architecture">Architecture</a>
@@ -30,15 +32,17 @@
 
 ---
 
-Mosaic is a native iPhone app that helps people understand changes in a credit file, decide what deserves attention, and organize a documented next step. Source documents stay on-device. AI assistance only sees redacted report facts. Every recovery action remains a draft for personal review.
+Mosaic gives women a normal, discreet reason to check their credit. It turns an unfamiliar change into an organized, source-linked recovery plan without deciding what happened for them.
+
+Checking a report looks like ordinary financial hygiene. Mosaic shows what changed, keeps every finding tied to the source page, and prepares editable drafts the user reviews herself. Original documents stay on-device. Assistance only sees redacted report facts. Mosaic never names a cause or submits a dispute.
 
 <table>
   <tr>
     <td width="56" align="center" valign="top">
-      <img src="https://api.iconify.design/octicon:file-24.svg?color=%233423A6" width="22" height="22" alt="">
+      <img src="https://api.iconify.design/octicon:eye-24.svg?color=%233423A6" width="22" height="22" alt="">
     </td>
     <td>
-      <strong>Import locally.</strong> PDFs are encrypted in the iOS container with CryptoKit and Keychain. They are not uploaded.
+      <strong>A discreet check-in.</strong> Opening Mosaic looks like reviewing credit, not investigating a crisis.
     </td>
   </tr>
   <tr>
@@ -54,8 +58,48 @@ Mosaic is a native iPhone app that helps people understand changes in a credit f
       <img src="https://api.iconify.design/octicon:pencil-24.svg?color=%233423A6" width="22" height="22" alt="">
     </td>
     <td>
-      <strong>Stay in control.</strong> Letters, checklists, and packets are editable drafts. Mosaic never submits a dispute.
+      <strong>Stay in control.</strong> Letters, checklists, and packets are editable drafts. Mosaic does not decide what happened, and never submits a dispute.
     </td>
+  </tr>
+</table>
+
+<br>
+
+<h2 id="product-preview">
+  <img src="https://api.iconify.design/octicon:device-mobile-24.svg?color=%233423A6" width="22" height="22" alt="">
+  Product preview
+</h2>
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-signin.jpg" width="240" alt="Mosaic sign-in screen"><br>
+      <strong>Sign in</strong><br>
+      <sub>A calm start. Mosaic never submits anything for you.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-home.jpg" width="240" alt="Mosaic home screen before a report is imported"><br>
+      <strong>Home</strong><br>
+      <sub>Add a report, then ask Mosaic what to do next.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-ask.jpg" width="240" alt="Mosaic home screen with a source-linked decision brief"><br>
+      <strong>Mosaic's read</strong><br>
+      <sub>What matters, a next action, and what Mosaic can prepare.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-letters.jpg" width="240" alt="Mosaic letters tab with editable recovery drafts"><br>
+      <strong>Letters</strong><br>
+      <sub>Editable drafts you review before mailing.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/mosaic-locked.jpg" width="240" alt="Mosaic lock screen with Face ID unlock"><br>
+      <strong>Locked</strong><br>
+      <sub>Face ID or passcode keeps the workspace private.</sub>
+    </td>
+    <td></td>
   </tr>
 </table>
 
@@ -116,7 +160,7 @@ credit-report PDF or synthetic fixture
 | <img src="https://cdn.simpleicons.org/postgresql/4169E1" width="18" height="18" alt=""> | **PostgreSQL** · `pg` | Timescale-compatible persistence for workflow facts |
 | <img src="https://cdn.simpleicons.org/auth0/EB5424" width="18" height="18" alt=""> | **Auth0 JWKS** | Verifies the iOS ID token and scopes workspace by `sub` |
 
-The iOS client is the source of truth for the original PDF. The API only receives identifiers and workflow facts that have already passed the privacy boundary.
+The app is the source of truth for the original PDF. The API only receives identifiers and workflow facts that have already passed the privacy boundary.
 
 ---
 
@@ -125,13 +169,13 @@ The iOS client is the source of truth for the original PDF. The API only receive
   Architecture
 </h2>
 
-The system is local-first. The iOS client owns the original report and the decision workflow. External services receive only bounded, redacted context.
+The system is local-first. The app owns the original report and the decision workflow. External services receive only bounded, redacted context.
 
 ```mermaid
 flowchart TB
     User([User])
 
-    subgraph phone [iPhone app]
+    subgraph phone [App]
         UI[SwiftUI]
         State[AppState]
         Local[Pick encrypt extract redact diff]
