@@ -126,11 +126,11 @@ struct OverviewView: View {
             let icon = isAdded ? "arrow.up.right" : (isReduced ? "arrow.down.right" : "arrow.right")
             let label = isAdded ? "Net debt added" : (isReduced ? "Net debt reduced" : "No net debt change")
 
-            HStack(alignment: .firstTextBaseline, spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(indicatorColor)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .center, spacing: 1) {
                     Text(formattedCurrency(cents: abs(deltaCents)))
                         .font(MosaicFont.medium(48))
                         .foregroundColor(Color.mosaicInk)
@@ -141,6 +141,7 @@ struct OverviewView: View {
                         .foregroundColor(Color.mosaicSubtle)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(label), \(formattedCurrency(cents: abs(deltaCents)))")
         }
