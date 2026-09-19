@@ -60,9 +60,7 @@ struct RecoveryView: View {
         if let last4 = packet.itemLast4 {
             return appState.currentSnapshot?.accounts.first { $0.accountLast4 == last4 }
         }
-        return appState.currentSnapshot?.accounts.first {
-            $0.accountType.localizedCaseInsensitiveContains("collection")
-        }
+        return nil
     }
 
     private func primaryLetterBinding(for index: Int) -> Binding<PacketDocument>? {
@@ -124,6 +122,9 @@ struct RecoveryView: View {
         if type.contains("collection") { return "Debt" }
         if type.contains("revolving") || type.contains("card") { return "Balance" }
         if type.contains("mortgage") || type.contains("loan") { return "Loan" }
+        let itemName = packet.itemName.lowercased()
+        if itemName.contains("inquiry") { return "Inquiry" }
+        if itemName.contains("address") { return "Address" }
         switch packet.classificationAtCreation {
         case .unrecognized, .someoneElseOpened, .pressuredOrNotFreelyAgreed: return "Debt"
         case .jointOrShared, .authorizedUser: return "Review"
