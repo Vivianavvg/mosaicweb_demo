@@ -11,3 +11,4 @@ DerivedData/
 .env
 .env.local
 node_modules/
+.watcher_state.json
