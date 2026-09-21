@@ -84,7 +84,6 @@ function renderSignin() {
             generate a summary, and nothing is filed or mailed without you.
           </p>
         </div>
-        <p class="signin-note">Demo — authentication is simulated (Auth0 in the real app). No account needed.</p>
       </div>
     </div>`;
   document.getElementById("signin-btn").onclick = () => go("import");
@@ -109,7 +108,6 @@ function renderShell(inner) {
         <span class="logo"></span>
         <span class="wordmark">Mosaic</span>
       </div>
-      <span class="synthetic-badge">✦ SYNTHETIC DEMO DATA</span>
     </header>
     <main class="shell-main">${inner}</main>
     <nav class="tab-bar">
@@ -159,7 +157,7 @@ function renderImport() {
       <div class="dz-inner">
         <div class="dz-ico">↓</div>
         <div class="dz-text">Drop a report here to analyze</div>
-        <div class="dz-hint">synthetic files only — nothing is uploaded</div>
+        <div class="dz-hint">Nothing is uploaded — files are processed on-device</div>
       </div>
     </div>
 
@@ -309,11 +307,11 @@ function renderAnalysis() {
 
     <div class="ai-banner">
       <span class="spark">✦</span>
-      <span>Summary and draft are pre-generated. Review the facts, edit the letter, then send it yourself — Mosaic never submits anything for you.</span>
+      <span>Review the facts, edit the letter, then send it yourself — Mosaic never submits anything for you.</span>
     </div>
 
     <div class="card">
-      <h3>Mosaic's read <span class="ai-tag">AI · pre-generated</span></h3>
+      <h3>Mosaic's read <span class="ai-tag">AI</span></h3>
       <p class="summary-text">${ai.summary || ""}</p>
       ${ai.recommendedActions ? `<ul class="actions-list">${ai.recommendedActions.map((a) => `<li>${a}</li>`).join("")}</ul>` : ""}
     </div>
